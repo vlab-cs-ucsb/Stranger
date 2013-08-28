@@ -1099,6 +1099,7 @@ void testRightTrim(){
 	dfaFree(complex);
 	dfaFree(trimmed);
 
+    //we need more test
 
 
 	free(ltrA);
