@@ -2954,10 +2954,7 @@ unsigned char strtobin(char* binChar, int var){
 }
 
 
-typedef struct CharPair_ {
-	unsigned char first;
-	unsigned char last;
-} CharPair, *pCharPair;
+
 
 
 

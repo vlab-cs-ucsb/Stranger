@@ -323,7 +323,7 @@ DFA *dfaPreLeftTrim(DFA *M, char c, int var, int *oldIndices) {
 	char* lambda = bintostr(c, var);
 	boolean extraBitNeeded = FALSE;
 
-	max_exeps = 1 << len; //maybe exponential
+
 	sink = find_sink(M);
 	assert(sink>-1);
 	//printf("\n\n SINK %d\n\n\n", sink);
@@ -369,7 +369,7 @@ DFA *dfaPreLeftTrim(DFA *M, char c, int var, int *oldIndices) {
 
 	len = extraBitNeeded? var + 1: var;
 	indices = extraBitNeeded? allocateArbitraryIndex(len) : oldIndices;
-
+	max_exeps = 1 << len; //maybe exponential
 	dfaSetup(ns, len, indices);
 	exeps = (char *) malloc(max_exeps * (len + 1) * sizeof(char));
 	to_states = (int *) malloc(max_exeps * sizeof(int));
@@ -698,9 +698,9 @@ DFA *dfaRightTrim(DFA *M, char c, int var, int *oldindices) {
 	result = dfaMinimize(tmpM);
 	dfaFree(tmpM);tmpM = NULL;
 
-	// if start state reaches an accept state on lambda then
-	// add epsilon to language
-	if (check_value(states, M->s)){
+	// if original accept epsilon or start state reaches an accept state on lambda (\s+ is an element of L(M))
+    //then add epsilon to language
+	if (M->f[M->s] == 1 || check_value(states, M->s)){
 		tmpM = dfa_union_empty_M(result);
 		dfaFree(result); result = NULL;
 		result = tmpM;
@@ -1763,13 +1763,13 @@ DFA* dfaAddSlashes(DFA* inputAuto, int var, int* indices){
 
 	DFA* searchAuto = dfa_construct_string("\\", var, indices);
 	char* replaceStr = "\\\\";
-	DFA* retMe1 = dfa_replace_extrabit(searchAuto, inputAuto, replaceStr, var, indices);
+	DFA* retMe1 = dfa_replace_extrabit(inputAuto, searchAuto, replaceStr, var, indices);
 	dfaFree(searchAuto); searchAuto = NULL;
 	// escape single quota '
 	// ' -> \'
 	searchAuto = dfa_construct_string("'", var, indices);
 	replaceStr = "\\'";
-	DFA* retMe2 = dfa_replace_extrabit(searchAuto, retMe1, replaceStr, var, indices);
+	DFA* retMe2 = dfa_replace_extrabit(retMe1, searchAuto, replaceStr, var, indices);
 	dfaFree(searchAuto); searchAuto = NULL;
 	dfaFree(retMe1); retMe1 = NULL;
 
@@ -1777,7 +1777,7 @@ DFA* dfaAddSlashes(DFA* inputAuto, int var, int* indices){
 	// " -> \"
 	searchAuto = dfa_construct_string("\"", var, indices);
 	replaceStr = "\\\"";
-	retMe1 = dfa_replace_extrabit(searchAuto, retMe2, replaceStr, var, indices);
+	retMe1 = dfa_replace_extrabit(retMe2, searchAuto, replaceStr, var, indices);
 	dfaFree(searchAuto); searchAuto = NULL;
 	dfaFree(retMe2); retMe2 = NULL;
 
@@ -1795,13 +1795,13 @@ DFA* dfaPreAddSlashes(DFA* inputAuto, int var, int* indices){
 
 	DFA* searchAuto = dfa_construct_string("\\", var, indices);
 		char* replaceStr = "\\\\";
-		DFA* retMe1 = dfa_pre_replace_str(searchAuto, inputAuto, replaceStr, var, indices);
+		DFA* retMe1 = dfa_pre_replace_str(inputAuto, searchAuto, replaceStr, var, indices);
 		dfaFree(searchAuto); searchAuto = NULL;
 		// escape single quota '
 		// ' -> \'
 		searchAuto = dfa_construct_string("'", var, indices);
 		replaceStr = "\\'";
-		DFA* retMe2 = dfa_pre_replace_str(searchAuto, retMe1, replaceStr, var, indices);
+		DFA* retMe2 = dfa_pre_replace_str(retMe1, searchAuto, replaceStr, var, indices);
 		dfaFree(searchAuto); searchAuto = NULL;
 		dfaFree(retMe1); retMe1 = NULL;
 
@@ -1809,7 +1809,7 @@ DFA* dfaPreAddSlashes(DFA* inputAuto, int var, int* indices){
 		// " -> \"
 		searchAuto = dfa_construct_string("\"", var, indices);
 		replaceStr = "\\\"";
-		retMe1 = dfa_pre_replace_str(searchAuto, retMe2, replaceStr, var, indices);
+		retMe1 = dfa_pre_replace_str(retMe2, searchAuto, replaceStr, var, indices);
 		dfaFree(searchAuto); searchAuto = NULL;
 		dfaFree(retMe2); retMe2 = NULL;
 

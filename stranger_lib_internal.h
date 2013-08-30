@@ -5,9 +5,17 @@
  *      Author: yuf
  */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #ifndef STRANGER_LIB_INTERNAL_H_
 #define STRANGER_LIB_INTERNAL_H_
 
+#include "stranger.h"
+    
 struct int_list_type *new_ilt();
 int find_sink(DFA *M);
 struct int_list_type *enqueue(struct int_list_type *list, int value);
@@ -42,5 +50,21 @@ DFA* dfa_pre_replace(DFA* M1, DFA* M2, DFA* M3, int var, int* indices);
 DFA* dfa_pre_replace_str(DFA* M1, DFA* M2, char *str, int var, int* indices);
 DFA *dfa_replace(DFA *M1, DFA *M2, DFA *M3, int var, int *indices);
 
+
+typedef struct CharPair_ {
+	unsigned char first;
+	unsigned char last;
+} CharPair, *pCharPair;
+void getTransitionChars(char* transitions, int var, pCharPair result[], int* pSize);
+char** mergeCharRanges(pCharPair charRanges[], int* p_size);
+
+
+
+
+
 #endif /* STRANGER_LIB_INTERNAL_H_ */
 
+    
+#ifdef __cplusplus
+}
+#endif

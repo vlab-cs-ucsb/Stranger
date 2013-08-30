@@ -155,10 +155,13 @@ DFA *dfa_negate(DFA *M1, int var, int *indices);
 
 DFA *dfa_concat(DFA *M1, DFA *M2, int var, int *indices);
 
-// DO NOT USE
-// use dfa_concat which considers the empty string then calls this one
+// DO NOT USE THIS CONCAT. INSTEAD use dfa_concat. That one considers the empty string first then calls this one
 DFA *dfa_concat_extrabit(DFA *M1, DFA *M2, int var, int *indices);
 
+//M1: subject automaton that replace will occur on
+//M2: search automaton representing the pattern that we will match against
+//str: the replace string
+// replace ALL strings that match L(M2) in L(M1) with string str
 DFA *dfa_replace_extrabit(DFA *M1, DFA *M2, char *str, int var, int *indices);
 
 DFA *dfa_closure_extrabit(DFA *M1,int var,int *indices); // added by Muath to be used by java StrangerLibrary
