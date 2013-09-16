@@ -105,9 +105,9 @@ char *bintostrWithExtraBits(unsigned long n, int k, int aux) {
 
 //Construct DFA accepts one character within [a-b]
 DFA *dfa_construct_range(char a, char b, int var, int *indices){
-  unsigned long n, n1, n2;
-  n1 = (unsigned long) a;
-  n2 = (unsigned long) b;
+  int n, n1, n2;
+  n1 = (int) a;
+  n2 = (int) b;
   int i = n2-n1;
   assert(i>=0); //range a-b,
   dfaSetup(3,var,indices);
@@ -137,7 +137,7 @@ DFA *dfa_construct_range(char a, char b, int var, int *indices){
 // Each transition in the transition array has a source state, destination state and a range of characters (the range is between firt and last)
 // The transition array must be sorted based on the source state
 // We create an extra sink state which is the state labeled n_states (so the constructed automaton has n_states+1 states)
-DFA *dfa_construct_from_automaton(int n_states, int n_trans, transition* transitions, char* accept_states, int var, unsigned *indices){
+DFA *dfa_construct_from_automaton(int n_states, int n_trans, transition* transitions, char* accept_states, int var, int *indices){
 	int  n, n1, n2;
 	int diff;
 	dfaSetup(n_states+1,var,indices);
@@ -191,7 +191,7 @@ DFA *dfa_construct_from_automaton(int n_states, int n_trans, transition* transit
 }
 
 
-void test_dfa_construct_from_automaton(int var, unsigned *indices){
+void test_dfa_construct_from_automaton(int var, int *indices){
 	transition* t = (transition*) malloc(2 * sizeof(transition));
 	t[0].source = 0;t[0].dest = 1; t[0].first = 'a'; t[0].last = 'd';
 	t[1].source = 0;t[1].dest = 1; t[1].first = 'o'; t[1].last = 'r';
@@ -199,7 +199,7 @@ void test_dfa_construct_from_automaton(int var, unsigned *indices){
 	dfaPrintVerbose(result);
 	printf("Test 1 passed - 1\n");
 
-	dfaPrintGraphviz(result, var, indices);
+//	dfaPrintGraphviz(result, var, indices);
 	printf("Test 1 passed - 2\n");
 
 	dfaFree(result);
@@ -226,7 +226,7 @@ void test_dfa_construct_from_automaton(int var, unsigned *indices){
 	dfaPrintVerbose(result);
 	printf("Test 2 passed - 1\n");
 
-	dfaPrintGraphviz(result, var, indices);
+//	dfaPrintGraphviz(result, var, indices);
 	printf("Test 2 passed - 2\n");
 
 	dfaFree(result);
@@ -343,6 +343,16 @@ int* allocateAscIIIndex(int length) {
 	int i;
 	int* indices;
 	indices = (int *) malloc(length * sizeof(int));
+	for (i = 0; i < length; i++)
+		indices[i] = i;
+	return indices;
+}
+
+//set less significant bit less priority
+unsigned* allocateAscIIIndexUnsigned(int length) {
+	int i;
+	unsigned* indices;
+	indices = (unsigned *) malloc(length * sizeof(unsigned));
 	for (i = 0; i < length; i++)
 		indices[i] = i;
 	return indices;
@@ -695,7 +705,7 @@ DFA *dfa_construct_string(char *reg, int var, int *indices) {
 	char *finals;
 	char* binChar;
 	DFA* result;
-	int len = strlen(reg);
+	int len = (int) strlen(reg);
 	finals = (char *) malloc((len + 2) * sizeof(char));
 	dfaSetup(len + 2, var, indices);
 	for (i = 0; i < len; i++) {
@@ -738,7 +748,7 @@ DFA *dfa_construct_string_extrabit(char *reg, int var, int *indices) {
 	char *finals;
 	char* binChar;
 	DFA* result;
-	int len = strlen(reg);
+	int len = (int)strlen(reg);
 	finals = (char *) malloc((len + 2) * sizeof(char));
 	dfaSetup(len + 2, var + 1, indices);
 	for (i = 0; i < len; i++) {
@@ -770,7 +780,7 @@ DFA *dfa_construct_string_closure(char *reg, int var, int *indices) {
 	char *finals;
 	char* binChar;
 	DFA* result;
-	int len = strlen(reg);
+	int len = (int) strlen(reg);
 
 	finals = (char *) malloc((len + 2) * sizeof(char));
 	dfaSetup(len + 2, var, indices);
@@ -802,7 +812,7 @@ DFA *dfa_construct_string_closure(char *reg, int var, int *indices) {
 DFA *dfa_construct_string_closure_extrabit(char *reg, int var, int *indices) {
 	int i;
 	char *finals;
-	int len = strlen(reg);
+	int len = (int) strlen(reg);
 	finals = (char *) malloc((len + 2) * sizeof(char));
 	dfaSetup(len + 2, var + 1, indices);
 	for (i = 0; i < len; i++) {
@@ -844,10 +854,12 @@ DFA *dfa_union_empty_M(DFA *M, int var, int *indices) {
 // DO NOT USE. Does not handle empty string correctly.
 // use dfa_union_with_emptycheck instead
 DFA *dfa_union(M1, M2)
-	DFA *M1;DFA *M2; {
-	DFA *result;
+DFA *M1;DFA *M2; {
+	DFA *result, *tmp;
 	result = dfaProduct(M1, M2, dfaOR);
-	return dfaMinimize(result);
+    tmp = dfaMinimize(result);
+    dfaFree(result);
+    return tmp;
 }
 
 /*
@@ -904,13 +916,13 @@ DFA *dfa_closure_extrabit(M1, var, indices)
 	DFA *tmpM;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k, ka, numOfAddedPaths;
 	char *exeps;
 	char *addedexeps;
 	int *to_states;
 	int *added_to_states;
 	int sink;
-	long max_exeps, k, ka, numOfAddedPaths;
+	long max_exeps;
 	char *statuces;
 	int len;
 	len = var + 1; //one extra bit
@@ -956,7 +968,7 @@ DFA *dfa_closure_extrabit(M1, var, indices)
 	}
 	kill_paths(state_paths);
 	numOfAddedPaths = k; //ka is the number of new paths
-	if(_FANG_DFA_DEBUG) printf("\n\n FANG: Concat NUMBER OF ADDED PATHS %ld \n\n", numOfAddedPaths);
+	if(_FANG_DFA_DEBUG) printf("\n\n FANG: Concat NUMBER OF ADDED PATHS %d \n\n", numOfAddedPaths);
 
 	for (i = 0; i < M1->ns; i++) {
 
@@ -1059,12 +1071,12 @@ int check_init_reachable(M, var, indices)
 	  DFA *tmpM;
 	  paths state_paths, pp;
 	  trace_descr tp;
-	  int i, j;
+	  int i, j, k, ka, numOfAddedPaths;
 	  char *exeps;
 	  char *addedexeps;
 	  int *to_states;
 	  int *added_to_states;
-	  long max_exeps, k, ka, numOfAddedPaths;
+	  long max_exeps;
 	  char *statuces;
 	  int len, shift, newns, sink1, sink2;
 	  int initflag = check_init_reachable(M2, var, indices);
@@ -1250,7 +1262,9 @@ int check_init_reachable(M, var, indices)
 	  //printf("FREE STATUCES\n");
 	  free(statuces);
 	  dfaFree(tmpM);
-	  return dfaMinimize(result);
+      tmpM = dfaMinimize(result);
+        dfaFree(result);
+        return tmpM;
 	}//End of dfa_concat_extrabit
 
 
@@ -1262,13 +1276,13 @@ int check_init_reachable(M, var, indices)
 	  DFA *result;
 	  paths state_paths, pp;
 	  trace_descr tp;
-	  int i, j;
+	  int i, j, k;
 	  char *exeps;
 	  char *addedexeps;
 	  int *to_states;
 	  int *added_to_states;
 	  int sink;
-	  long max_exeps, k;
+	  long max_exeps;
 	  char *statuces;
 	  int len;
 	  int ns = M->ns+1;
@@ -1424,10 +1438,10 @@ DFA *dfa_replace_step1_duplicate(DFA *M, int var, int *indices) {
     DFA *temp;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k;
 	char *exeps;
 	int *to_states;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len, shift, newns, sink;
 	char *sharp1;
@@ -1571,13 +1585,13 @@ DFA *dfa_star_M_star(DFA *M, int var, int *indices) {
 	DFA *tmpM;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k;
 	char *exeps;
 	char *addedexeps;
 	int *to_states;
 	int *added_to_states;
 	int sink;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len;
 	int ns = M->ns + 1;
@@ -1700,8 +1714,11 @@ DFA *dfa_star_M_star(DFA *M, int var, int *indices) {
 	free(to_states);
 	free(added_to_states);
 	free(statuces);
+    free(arbitrary);
 	dfaFree(tmpM);
-	return dfaMinimize(result);
+    tmpM = dfaMinimize(result);
+    dfaFree(result);
+	return tmpM;
 
 }
 
@@ -1727,13 +1744,13 @@ DFA *dfa_union_add_empty_M(DFA *M, int var, int *indices) {
 	DFA *result;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k;
 	char *exeps;
 	char *addedexeps;
 	int *to_states;
 	int *added_to_states;
 	int sink;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len;
 	int ns = M->ns + 1;
@@ -1859,10 +1876,10 @@ DFA *dfa_replace_step2_match_compliment(DFA *M, int var, int *indices) {
 	//	DFA *M_e;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j, y;
+	int i, j, y, k;
 	char *exeps;
 	int *to_states;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len, shift, newns, sink, sink_M_neg;
 	char *sharp1;
@@ -2126,8 +2143,11 @@ struct int_list_type *reachable_closure(DFA *M, int start, int var,
 			pp = pp->next;
 			finalflag = 1;
 		}
-
+        kill_paths(state_paths);
 	}
+    free_ilt(worklist);
+    free(visited);
+    free(sharp0);
 	return finallist;
 }
 
@@ -2146,8 +2166,11 @@ int exist_sharp1_path(DFA *M, int start, int var) {
 	//printf("Find sink in sharp1: %d\n", sink);
 	assert(start < M->ns);
 
-	if (start == sink)
+	if (start == sink){
+        free(indices);
+        free(sharp1);
 		return -1;
+    }
 	else {
 		state_paths = pp = make_paths(M->bddm, M->q[start]);
 
@@ -2171,14 +2194,19 @@ int exist_sharp1_path(DFA *M, int start, int var) {
 				}
 				if (finalflag != 0) {
 					free(indices);
-					return pp->to;
+                    free(sharp1);
+                    int toState = pp->to;
+                    kill_paths(state_paths);
+					return toState;
 				}
 			}
 			pp = pp->next;
 			finalflag = 1;
 		}
+        kill_paths(state_paths);
 	}
 	free(indices);
+    free(sharp1);
 	return -1;
 }
 
@@ -2685,20 +2713,22 @@ DFA *dfaQuestionMark(int var, int *indices){
  **********************************************/
 
 int check_emptiness(M1, var, indices)
-	DFA *M1;int var;int *indices; {
+DFA *M1;int var;int *indices; {
 	char *satisfyingexample = NULL;
 	int i;
 	unsigned *uindices = (unsigned *) malloc((var+1) * sizeof(unsigned));
-
+    
 	//conver int to unsigned
 	for (i = 0; i < var; i++)
 		uindices[i] = (indices[i] <= 0 ? 0 : indices[i]);
 	uindices[i] = '\0';
-
+    
 	satisfyingexample = dfaMakeExample(M1, 1, var, uindices);
-
+    
 	mem_free(uindices);
-	return ((satisfyingexample == NULL) ? 1 : 0);
+    int result = ((satisfyingexample == NULL) ? 1 : 0);
+    free(satisfyingexample);
+    return result;
 }
 
 int check_intersection(M1, M2, var, indices)
@@ -2744,6 +2774,109 @@ int check_inclusion(M1, M2, var, indices)
 	return result;
 }
 
+/**
+ * converts mona binary char representation into an ascii char
+ * Example: input: "01000001" --> output: 'A'
+ */
+unsigned char strtobin(char* binChar, int var){
+	// no extra bit
+	char* str = binChar;
+	int k = var;
+	unsigned char c = 0;
+	for (k = 0; k < var; k++) {
+		if (str[k] == '1')
+			c |= 1;
+		else
+			c |= 0;
+		if (k < (var-1))
+			c <<= 1;
+	}
+	return c;
+}
+
+/**
+ * Muath documentation:
+ * returns a list of states containing each state s that has at least one transition on lambda
+ * into it and one transition on non-lambda out of it (except for sink state which is ignored)
+ * end Muath documentation
+ */
+char *isSingleton(DFA *M, int var, int* indices){
+    if (check_emptiness(M, var, indices))
+        return NULL;
+    if (checkEmptyString(M))
+        return "";
+	paths state_paths, pp;
+	trace_descr tp;
+	int j, i, current, next, singleTransOut;
+    char *result = (char*) malloc(M->ns * sizeof(char));
+    char *symbol = (char*) malloc((var + 1) * sizeof(char));
+	int sink = find_sink(M);
+	struct int_list_type *visited=NULL;
+	for (i = 0, current = 0, singleTransOut = TRUE; singleTransOut == TRUE && current != -1; current = next, i++){
+		singleTransOut = TRUE;
+        next = -1;
+		state_paths = pp = make_paths(M->bddm, M->q[current]);
+		while (pp && singleTransOut) {
+			if(pp->to != sink){
+				// construct transition from current to pp->to and store it in symbol
+				for (j = 0; j < var; j++) {
+                    //This loop is to order only
+					for (tp = pp->trace; tp && (tp->index != indices[j]); tp = tp->next);
+                    //if current bit is X then more than one char in this transition
+					if (tp){
+                        if (tp->value)
+                            symbol[j] = '1';
+                        else
+                            symbol[j] = '0';
+                    }
+                    else
+                        singleTransOut = FALSE;
+                    
+				}
+                symbol[var] = '\0';
+                result[i] = strtobin(symbol, var);
+                //if we have only one char on this transition
+                if (singleTransOut){
+                    //if we have not seen any next state
+                    if (next == -1){
+                        if (current == pp->to)
+                            singleTransOut = FALSE;
+                        else
+                            next = pp->to;
+                    }
+                    //if next state is not the same as previous next state then more than one transitino
+                    else if (next != pp->to)
+                        singleTransOut = FALSE;
+                }
+			}
+			pp = pp->next;
+		}
+        kill_paths(state_paths);
+        if (singleTransOut == TRUE && next != -1){
+            //if loop is found then no singleton
+            if (check_value(visited, next)){
+                singleTransOut = FALSE;
+            }
+            else
+                visited = enqueue(visited, next);
+        }
+	}
+
+    if (visited != NULL)
+        free_ilt(visited);
+    free(symbol);
+    if (singleTransOut == TRUE){
+        assert(i < M->ns);
+        result[i] = '\0';
+        return result;
+    }
+    else{
+        free(result);
+        return NULL;
+    }
+}
+
+
 /*
  * check if dfa only accepts empty string
  */
@@ -2771,7 +2904,7 @@ int isTransitionIncludeChar(const char *str, char target, int var){
  * checks if string element_of L(M)
  */
 int checkMembership(DFA* M, char* string, int var, int* indices){
-	int length, i, j, endState, prevEndState;
+	int length, i, j, endState;
 	paths state_paths, pp;
 	trace_descr tp;
 	char* symbol;
@@ -2779,7 +2912,7 @@ int checkMembership(DFA* M, char* string, int var, int* indices){
 
 	assert(string != NULL);
 
-	length = strlen(string);
+	length = (int) strlen(string);
 
 	if (length == 0)
 		return checkEmptyString(M);
@@ -2838,7 +2971,7 @@ void charToAsciiDigits(unsigned char ci, char s[])
     } while ((ci /= 10) > 0);     /* delete it */
 
     s[i] = '\0';
-	for (i = 0, j = strlen(s)-1; i<j; i++, j--) {
+	for (i = 0, j = (int)strlen(s)-1; i<j; i++, j--) {
 		c = s[i];
 		s[i] = s[j];
 		s[j] = c;
@@ -2933,25 +3066,7 @@ void fillOutCharRange(char* range, char firstChar, char lastChar){
 }
 
 
-/**
- * converts mona binary char representation into an ascii char
- * Example: input: "01000001" --> output: 'A'
- */
-unsigned char strtobin(char* binChar, int var){
-	// no extra bit
-	char* str = binChar;
-	int k = var;
-	unsigned char c = 0;
-	for (k = 0; k < var; k++) {
-		if (str[k] == '1')
-			c |= 1;
-		else
-			c |= 0;
-		if (k < (var-1))
-			c <<= 1;
-	}
-	return c;
-}
+
 
 
 
@@ -3059,7 +3174,6 @@ char** mergeCharRanges(pCharPair charRanges[], int* p_size){
 	int size = *p_size;
 	int i, k, newSize;
 	char newFirst, newLast;
-	char* first, last;
 
 	if (size == 0)
 		return NULL;
@@ -3089,6 +3203,104 @@ char** mergeCharRanges(pCharPair charRanges[], int* p_size){
 	return ranges;
 }
 
+
+int dfaPrintBDD(DFA *a, char *filename, int var)
+{
+    //table->noelems == nomber of bdd nodes
+    //table->elem == bdd node
+    Table *table = tableInit();
+    int i;
+    FILE *file;
+    
+    int sink = find_sink(a);
+    
+    if (filename) {
+        if ((file = fopen(filename, "w")) == 0)
+            return 0;
+    }
+    else {
+        file = stdout;
+        fprintf(file, "\n\n\n");
+    }
+    fprintf(file, "*****************************************************\n");
+    fprintf(file, "*                  MONA DFA BDD                     *\n");
+    fprintf(file, "*****************************************************\n");
+    
+    /* remove all marks in a->bddm */
+    bdd_prepare_apply1(a->bddm);
+    
+    /* build table of tuples (idx,lo,hi) */
+    for (i = 0; i < a->ns; i++)
+        _export_(a->bddm, a->q[i], table);
+    
+    /* renumber lo/hi pointers to new table ordering */
+    for (i = 0; i < table->noelems; i++) {
+        if (table->elms[i].idx != -1) {
+            table->elms[i].lo = bdd_mark(a->bddm, table->elms[i].lo) - 1;
+            table->elms[i].hi = bdd_mark(a->bddm, table->elms[i].hi) - 1;
+        }
+    }
+    
+    /* write to file */
+    fprintf(file,
+            "number of variables: %u\n", var);
+    
+    fprintf(file,
+            "states: %u\n"
+            "bdd nodes: %u\n",
+            a->ns, table->noelems);
+    
+    fprintf(file,
+            "digraph MONA_DFA_BDD {\n"
+            "  center = true;\n"
+            "  size = \"100.5,70.5\"\n"
+            //            "  orientation = landscape;\n"
+            "  node [shape=record];\n"
+            "   s1 [shape=record,label=\"");
+    
+    for (i = 0; i < a->ns; i++) {
+        fprintf(file, "{%d|<%d> %d}",
+                a->f[i],
+                i, i);
+        if (i+1 < table->noelems)
+            fprintf(file, "|");
+    }
+    fprintf(file, "\"];\n");
+    
+    fprintf(file, "  node [shape = circle];");
+    for (i = 0; i < table->noelems; i++)
+        if (table->elms[i].idx != -1)
+            fprintf(file, " %d [label=\"%d\"];", i, table->elms[i].idx);
+    fprintf(file, "\n  node [shape = box];");
+    for (i = 0; i < table->noelems; i++)
+        if (table->elms[i].idx == -1)
+            fprintf(file, " %d [label=\"%d\"];", i, table->elms[i].lo);
+    fprintf(file, "\n");
+    
+    for (i = 0; i < a->ns; i++)
+        fprintf(file, " s1:%d -> %d [style=bold];\n", i, bdd_mark(a->bddm, a->q[i]) - 1);
+    
+    for (i = 0; i < table->noelems; i++)
+        if (table->elms[i].idx != -1) {
+            int lo = table->elms[i].lo;
+            int hi = table->elms[i].hi;
+            fprintf(file, " %d -> %d [style=dashed];\n", i, lo);
+            fprintf(file, " %d -> %d [style=filled];\n", i, hi);
+        }
+    
+    fprintf(file, "}\n");
+    
+    
+    
+    if (filename)
+        fclose(file);
+    
+    tableFree(table);
+    
+    return 1;
+}
+
+
 /**
  * printSink: 0 do not print sink nor its incomming/outgoing edges at all,
  *         1 print sink+edges but no edge labels,
@@ -3107,7 +3319,7 @@ void dfaPrintGraphvizAsciiRange(DFA *a, int no_free_vars, int *offsets, int prin
 	char** ranges;
 
 	sink = find_sink(a);
-	assert( sink > -1);//with reserved chars, sink is always reject even when negated
+//	assert( sink > -1);//with reserved chars, sink is always reject even when negated
 	assert(no_free_vars == 8);
 
 	printf("digraph MONA_DFA {\n"
@@ -3879,11 +4091,11 @@ DFA *dfa_string_to_unaryDFA(M, var, indices)
 	DFA *tmpM;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k;
 	char *exeps;
 	int *to_states;
 	int sink;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len;
 	len = var + 1; //one extra bit
@@ -3947,7 +4159,7 @@ DFA *dfa_string_to_unaryDFA(M, var, indices)
 	for (i = 0; i < var; i++) {
 		tmpM = dfaProject(result, i);
 		result = dfaMinimize(tmpM);
-		//		printf("Projecting away the %dth bit\n", i);
+				printf("Projecting away the %dth bit\n", i);
 		//		dfaPrintVerbose(result);
 	}
 
@@ -3966,12 +4178,11 @@ DFA *dfa_string_to_unaryDFA(M, var, indices)
 DFA *dfa_restrict_by_unaryDFA(DFA *M, DFA* uL, int var, int *indices){
 	DFA *result, *length;
 	paths state_paths, pp;
-	trace_descr tp;
-	int i, j, num;
+	int i, j, num, k;
 	char *exeps;
 	int *to_states;
 	int sink;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	char* chars[] = {"1111110X", "111110XX", "11110XXX", "1110XXXX", "110XXXXX", "10XXXXXX", "0XXXXXXX"};
 
@@ -4021,7 +4232,7 @@ DFA *dfa_restrict_by_unaryDFA(DFA *M, DFA* uL, int var, int *indices){
 	length = dfaBuild(statuces);
 	printf("\n\nlength auto:\n");
 //	dfaPrintGraphvizAsciiRange(length, var, indices, 0);
-	dfaPrintGraphviz(length, var, indices);
+//	dfaPrintGraphviz(length, var, indices);
 	result = dfa_intersect(M, length);
 	dfaFree(length);
 
@@ -4218,6 +4429,9 @@ int isLengthFinite(DFA* M, int var, int* indices){
 	return result;
 }
 
+
+
+
 /*************************
 
  t \in {0, 1, 2}: (val, rem_t, rem_f)
@@ -4387,7 +4601,7 @@ static void print_example(char *example, char *name, int no_free_vars,
 	int i, j;
 	int length;
 
-	length = strlen(example) / (no_free_vars + 1);
+	length = (int)strlen(example) / (no_free_vars + 1);
 
 	if (treestyle) {
 		printf("Free variables are: ");
@@ -4544,7 +4758,7 @@ int dfa_export(DFA *a, char *filename, int num, char *vars[], int orders[]) {
 char arr_to_ascii(char * num){
 	char c;
 	int i = 0;
-	int powr = strlen(num) - 1;
+	int powr = (int)strlen(num) - 1;
 	unsigned int result = 0;
 	while ((c = num[i++]) != '\0'){
 		if (c == 'X'){

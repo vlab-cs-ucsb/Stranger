@@ -17,52 +17,96 @@
 /*                  Getting transition relation                       */
 /**********************************************************************/
 
-pTransitionRelation get_transition_relation(DFA *M){
-    unsigned state, degree, nextState;
+
+unsigned roundToNextPow2(unsigned v){
+    // compute the next highest power of 2 of 32-bit v
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
+
+int intcmpfunc (const void * a, const void * b)
+{
+    const unsigned *x = a, *y = b;
+    if(*x > *y)
+        return 1;
+    else
+        return(*x < *y) ? -1: 0;
+}
+
+pTransitionRelation dfaGetTransitionRelation(DFA *M){
+    unsigned state, degree, nextState, i;
     state = degree = nextState = 0;
     paths state_paths, pp;
     
-    int ssink = find_sink(M);
-    unsigned sink;
-    if (ssink == -1)
-        sink = UINT_MAX;
-    else
-        sink = ssink;
+    int sink = find_sink(M);
+    assert(sink >= 0);//assert that there is a sink
     
     pTransitionRelation p_transitionRelation = (pTransitionRelation) malloc(sizeof(transitionRelation));
     p_transitionRelation->reverse = false;
-    p_transitionRelation->num_of_nodes = M->ns;
+    p_transitionRelation->selfCycles = false;
+    p_transitionRelation->sink = (unsigned)sink;
+    p_transitionRelation->num_of_nodes = M->ns - 1;
+    p_transitionRelation->num_of_edges = 0;
     p_transitionRelation->adjList = (unsigned**) malloc((size_t)
                                                         (p_transitionRelation->num_of_nodes) * sizeof(unsigned*));
     mem_zero(p_transitionRelation->adjList, (size_t) p_transitionRelation->num_of_nodes * sizeof(unsigned*) );
-    p_transitionRelation->degrees = (t_st_char_size*) malloc((size_t)
-                                                             (p_transitionRelation->num_of_nodes) * sizeof(t_st_char_size));
-    mem_zero(p_transitionRelation->degrees, (size_t) p_transitionRelation->num_of_nodes * sizeof(t_st_char_size));
+    p_transitionRelation->degrees = (t_st_word*) malloc((size_t)
+                                                             (p_transitionRelation->num_of_nodes) * sizeof(t_st_word));
+    mem_zero(p_transitionRelation->degrees, (size_t) p_transitionRelation->num_of_nodes * sizeof(t_st_word));
     bool *nextStates = (bool*) malloc((size_t) (p_transitionRelation->num_of_nodes) * sizeof(bool));
     
-    for (state = 0; state < M->ns; state++){
-        if (sink == state){
-            p_transitionRelation->degrees[state] = 0;
-            p_transitionRelation->adjList[state] = NULL;
-            continue;
+    unsigned numOfAcceptStates = 0;
+    // a heuristic assuming 1/10th of states are accepting
+    p_transitionRelation->acceptsSize = roundToNextPow2(M->ns / 10);
+    p_transitionRelation->accepts = (unsigned *) mem_alloc((size_t) p_transitionRelation->acceptsSize * sizeof(unsigned));
+    mem_zero(p_transitionRelation->accepts, (size_t) p_transitionRelation->acceptsSize * sizeof(unsigned));
+    
+    for (i = 0; i < M->ns; i++){
+        if (M->f[i] == 1){
+            p_transitionRelation->accepts[numOfAcceptStates++] = (i < sink)? i : i - 1;
+            if (numOfAcceptStates == p_transitionRelation->acceptsSize){
+                p_transitionRelation->acceptsSize *= 2;
+                p_transitionRelation->accepts = (unsigned*) mem_resize(p_transitionRelation->accepts, (size_t) p_transitionRelation->acceptsSize * sizeof(unsigned));
+                mem_zero(p_transitionRelation->accepts + numOfAcceptStates, (size_t) (p_transitionRelation->acceptsSize - numOfAcceptStates) * sizeof(unsigned));
+            }
         }
+        
+        if (sink == i)
+            continue;
+        else if (sink < i)
+            state = i - 1;//shift state
+        else
+            state = i;
         /*******************  find node degree *********************/
-        memset(nextStates, false, sizeof(bool) * (M->ns));
-        state_paths = pp = make_paths(M->bddm, M->q[state]);
+        memset(nextStates, false, sizeof(bool) * (p_transitionRelation->num_of_nodes));
+        state_paths = pp = make_paths(M->bddm, M->q[i]);
         while (pp) {
+            if (pp->to == i)
+                p_transitionRelation->selfCycles = true;
+            unsigned to = (sink < pp->to)? pp->to - 1 : pp->to;
             if (pp->to != sink){
-                if (nextStates[pp->to] == false){
-                    nextStates[pp->to] = true;
+                if (nextStates[to] == false){
+                    nextStates[to] = true;
                     p_transitionRelation->degrees[state]++;
+                    p_transitionRelation->num_of_edges++;
                 }
             }
             pp = pp->next;
         }
         /*******************  allocate node's adjacency list and fill it up *********************/
-        p_transitionRelation->adjList[state] = (unsigned *) malloc((size_t) (p_transitionRelation->degrees[state]) * sizeof(unsigned) );
-        mem_zero(p_transitionRelation->adjList[state],(size_t) (p_transitionRelation->degrees[state]) * sizeof(unsigned));
-        for (nextState = 0, degree = 0; nextState < p_transitionRelation->num_of_nodes; nextState++) {
-            if (nextState != sink){
+        if (p_transitionRelation->degrees[state] == 0) {
+            p_transitionRelation->adjList[state]  = NULL;
+        }
+        else {
+            p_transitionRelation->adjList[state] = (unsigned *) malloc((size_t) (p_transitionRelation->degrees[state]) * sizeof(unsigned) );
+            mem_zero(p_transitionRelation->adjList[state],(size_t) (p_transitionRelation->degrees[state]) * sizeof(unsigned));
+            for (nextState = 0, degree = 0; nextState < p_transitionRelation->num_of_nodes; nextState++) {
                 if (nextStates[nextState] == true){
                     assert(degree < p_transitionRelation->degrees[state]);
                     p_transitionRelation->adjList[state][degree] = nextState;
@@ -72,16 +116,20 @@ pTransitionRelation get_transition_relation(DFA *M){
         }
     }
     
+    p_transitionRelation->acceptsSize = numOfAcceptStates;
+    p_transitionRelation->accepts = (unsigned*) mem_resize(p_transitionRelation->accepts, (size_t) p_transitionRelation->acceptsSize * sizeof(unsigned));
+    qsort(p_transitionRelation->accepts, p_transitionRelation->acceptsSize, sizeof(unsigned), intcmpfunc);
+    
     free(nextStates);
     return p_transitionRelation;
 }
 
-pTransitionRelation get_reverse_transition_relation(DFA *M){
+pTransitionRelation dfaGetReverseTransitionRelation(DFA *M){
     assert(M != NULL);
     return get_reverse_transition_relation_helper(M, NULL);
 }
 
-pTransitionRelation reverse_transition_relation(pTransitionRelation p_transitionRelation){
+pTransitionRelation dfaReverseTransitionRelation(pTransitionRelation p_transitionRelation){
     assert(p_transitionRelation != NULL);
     return get_reverse_transition_relation_helper(NULL, p_transitionRelation);
 }
@@ -90,87 +138,72 @@ pTransitionRelation get_reverse_transition_relation_helper(DFA *M, pTransitionRe
     unsigned state, degree, nextStateIndex, nextState;
     state = degree = nextStateIndex = nextState = 0;
     
-    int ssink = find_sink(M);
-    unsigned sink;
-    if (ssink == -1)
-        sink = UINT_MAX;
-    else
-        sink = ssink;
-    
     assert(!(M == NULL && p_transitionRelation == NULL));
     assert(!(M != NULL && p_transitionRelation != NULL));
     
-    p_transitionRelation = (M == NULL)? p_transitionRelation : get_transition_relation(M);
+    p_transitionRelation = (M == NULL)? p_transitionRelation : dfaGetTransitionRelation(M);
     
-    const unsigned num_of_nodes = (M == NULL)? p_transitionRelation->num_of_nodes : M->ns;
+    const unsigned num_of_nodes = (M == NULL)? p_transitionRelation->num_of_nodes : M->ns - 1;
     assert(num_of_nodes == p_transitionRelation->num_of_nodes);
     
     
     unsigned **reverseAdjList = (unsigned**) malloc((size_t)
                                                     num_of_nodes * sizeof(unsigned*));
     mem_zero(reverseAdjList, (size_t) num_of_nodes * sizeof(unsigned*) );
-    t_st_char_size *reverseDegrees = (t_st_char_size*) malloc((size_t)
-                                                              num_of_nodes * sizeof(t_st_char_size));
-    mem_zero(reverseDegrees, (size_t) num_of_nodes * sizeof(t_st_char_size));
-    
-    if (sink != -1){
-        reverseAdjList[sink] = NULL;
-        reverseAdjList[sink] = 0;
-    }
+    t_st_word *reverseDegrees = (t_st_word*) malloc((size_t)
+                                                              num_of_nodes * sizeof(t_st_word));
+    mem_zero(reverseDegrees, (size_t) num_of_nodes * sizeof(t_st_word));
     
     /*******************  find node degree *********************/
     for (state = 0; state < num_of_nodes; state++){
-        if (state != sink){
-            unsigned *nextStates = p_transitionRelation->adjList[state];
-            t_st_char_size nextStatesSize = p_transitionRelation->degrees[state];
-            for (nextStateIndex = 0; nextStateIndex < nextStatesSize; nextStateIndex++){
-                nextState = nextStates[nextStateIndex];
-                if (nextState != sink){
-                    reverseDegrees[nextState]++;
-                }
-            }
+        unsigned *nextStates = p_transitionRelation->adjList[state];
+        t_st_word nextStatesSize = p_transitionRelation->degrees[state];
+        for (nextStateIndex = 0; nextStateIndex < nextStatesSize; nextStateIndex++){
+            nextState = nextStates[nextStateIndex];
+            reverseDegrees[nextState]++;
         }
     }
     
     /*******************  allocate node's adjacency list and fill up *********************/
-    t_st_char_size *degreeCounters = (t_st_char_size *) malloc((size_t) num_of_nodes * sizeof(t_st_char_size));
-    mem_zero(degreeCounters, (size_t) num_of_nodes * sizeof(t_st_char_size));
+    t_st_word *degreeCounters = (t_st_word *) malloc((size_t) num_of_nodes * sizeof(t_st_word));
+    mem_zero(degreeCounters, (size_t) num_of_nodes * sizeof(t_st_word));
     
     for (state = 0; state < num_of_nodes; state++){
-        if (state != sink){
-            unsigned *nextStates = p_transitionRelation->adjList[state];
-            t_st_char_size nextStatesSize = p_transitionRelation->degrees[state];
-            for (nextStateIndex = 0; nextStateIndex < nextStatesSize; nextStateIndex++){
-                nextState = nextStates[nextStateIndex];
-                if (nextState != sink){
-                    if (reverseAdjList[nextState] == NULL){
-                        int degree = reverseDegrees[nextState];
-                        reverseAdjList[nextState] = (unsigned *) malloc((size_t) degree * sizeof(unsigned));
-                        mem_zero(reverseAdjList, (size_t) degree * sizeof(unsigned));
-                    }
-                    int degreeCounter = degreeCounters[nextState]++;
-                    reverseAdjList[nextState][degreeCounter] = state;
+        unsigned *nextStates = p_transitionRelation->adjList[state];
+        t_st_word nextStatesSize = p_transitionRelation->degrees[state];
+        for (nextStateIndex = 0; nextStateIndex < nextStatesSize; nextStateIndex++){
+            nextState = nextStates[nextStateIndex];
+            t_st_word degree = reverseDegrees[nextState];
+            //start state may have reverse degree of 0
+            if (degree != 0){
+                //first time then allocate reverse adjList
+                if (reverseAdjList[nextState] == NULL){
+                    reverseAdjList[nextState] = (unsigned *) mem_alloc((size_t) degree * sizeof(unsigned));
+                    mem_zero(reverseAdjList[nextState], (size_t) degree * sizeof(unsigned));
+                    
                 }
+                t_st_word degreeCounter = degreeCounters[nextState]++;
+                reverseAdjList[nextState][degreeCounter] = state;
             }
         }
     }
     
-    
-    pTransitionRelation p_reversreTansitionRelation = (pTransitionRelation) malloc(sizeof(transitionRelation));
-    p_reversreTansitionRelation->reverse = true;
-    p_reversreTansitionRelation->num_of_nodes = num_of_nodes;
-    p_reversreTansitionRelation->adjList = reverseAdjList;
-    p_reversreTansitionRelation->degrees = reverseDegrees;
-    
+    pTransitionRelation p_reverseTransitionRelation = (pTransitionRelation) malloc(sizeof(transitionRelation));
+    p_reverseTransitionRelation->reverse = true;
+    p_reverseTransitionRelation->sink = p_transitionRelation->sink;
+    p_reverseTransitionRelation->num_of_nodes = num_of_nodes;
+    p_reverseTransitionRelation->adjList = reverseAdjList;
+    p_reverseTransitionRelation->degrees = reverseDegrees;
+
     if (M != NULL)
-        free_transition_relation(p_transitionRelation);
+        dfaFreeTransitionRelation(p_transitionRelation);
     free(degreeCounters);
     
-    return p_reversreTansitionRelation;
+    return p_reverseTransitionRelation;
 }
 
 
-bool isNextState(pTransitionRelation p_transitionRelation, unsigned currentState, unsigned nextState){
+bool dfaIsNextState(pTransitionRelation p_transitionRelation, unsigned currentState, unsigned nextState){
     assert(p_transitionRelation->reverse == false);
     unsigned nextStateIndex;
     for (nextStateIndex = 0; nextStateIndex < p_transitionRelation->degrees[currentState]; nextStateIndex++){
@@ -181,7 +214,7 @@ bool isNextState(pTransitionRelation p_transitionRelation, unsigned currentState
     return false;
 }
 
-bool isPrevState(pTransitionRelation p_transitionRelation, unsigned currentState, unsigned prevState){
+bool dfaIsPrevState(pTransitionRelation p_transitionRelation, unsigned currentState, unsigned prevState){
     assert(p_transitionRelation->reverse == true);
     if (p_transitionRelation->reverse){
         unsigned nextStateIndex;
@@ -195,10 +228,11 @@ bool isPrevState(pTransitionRelation p_transitionRelation, unsigned currentState
 }
 
 
-void free_transition_relation(pTransitionRelation p_transitionRelation){
+void dfaFreeTransitionRelation(pTransitionRelation p_transitionRelation){
     int state;
     for (state = 0; state < p_transitionRelation->num_of_nodes; state++){
-        free(p_transitionRelation->adjList[state]);
+        if (p_transitionRelation->degrees[state] > 0)
+            free(p_transitionRelation->adjList[state]);
     }
     free(p_transitionRelation->adjList);
     free(p_transitionRelation->degrees);
@@ -206,7 +240,7 @@ void free_transition_relation(pTransitionRelation p_transitionRelation){
 }
 
 
-unsigned getDegree(DFA *M, unsigned state){
+unsigned dfaGetDegree(DFA *M, unsigned state){
     int ssink = find_sink(M);
     unsigned sink;
     if (ssink == -1)
@@ -251,7 +285,7 @@ unsigned getDegree(DFA *M, unsigned state){
     return degree;
 }
 
-unsigned getMaxDegree(DFA *M, unsigned *p_maxState){
+unsigned dfaGetMaxDegree(DFA *M, unsigned *p_maxState){
     int ssink = find_sink(M);
     unsigned sink;
     if (ssink == -1)
@@ -262,7 +296,7 @@ unsigned getMaxDegree(DFA *M, unsigned *p_maxState){
     unsigned state = 0, maxState = 0, maxDegree = 0, degree = 0;
     
     for (state = 0; state < M->ns; state++){
-        degree = getDegree(M, state);
+        degree = dfaGetDegree(M, state);
         if (maxDegree < degree){
             maxDegree = degree;
             maxState = state;
@@ -273,23 +307,27 @@ unsigned getMaxDegree(DFA *M, unsigned *p_maxState){
     return maxDegree;
 }
 
-void printTransitionRelation(pTransitionRelation p_transitionRelation){
+void dfaPrintTransitionRelation(pTransitionRelation p_transitionRelation){
     assert(p_transitionRelation != NULL);
     printf("**********************************\n");
     printf("*     Transition Relation        *\n");
     printf("**********************************\n");
     printf("from | to\n");
     printf("-----|----------------------------\n");
-    unsigned i, j;
+    unsigned i, j,state;
     for (i = 0; i < p_transitionRelation->num_of_nodes; i++){
-        if (p_transitionRelation->adjList[i] == NULL)
+        state = (i < p_transitionRelation->sink)? i : i + 1;
+        printf("%5u| ",state);
+        if (p_transitionRelation->degrees[i] == 0){
+            printf("\n");
             continue;
-        printf("%5u| ",i);
+        }
         for (j = 0; j < p_transitionRelation->degrees[i]; j++){
+            state = (i < p_transitionRelation->sink) ? p_transitionRelation->adjList[i][j] : p_transitionRelation->adjList[i][j] + 1;
             if (j == 0)
-                printf("%u", p_transitionRelation->adjList[i][j]);
+                printf("%u", state);
             else
-                printf(", %u", p_transitionRelation->adjList[i][j]);
+                printf(", %u", state);
         }
         printf("\n");
     }
@@ -304,8 +342,8 @@ void printTransitionRelation(pTransitionRelation p_transitionRelation){
 #define GRAY 1
 #define BLACK 2
 
-int n;  // number of nodes
-int e;  // number of edges
+int numOfNodes;  // number of nodes
+int numOfEdges;  // number of edges
 struct edge {
     int tail,head,type;
 };
@@ -316,28 +354,36 @@ int *firstEdge;  // Table indicating first in range of edges with a common tail
 int *vertexStatus,*secondDFSrestarts;
 
 int tailThenHead(const void* xin, const void* yin)
-// Used in calls to qsort() and bsearch() for read_input_file()
+// Used in calls to qsort() and bsearch() for dfa_to_graph()
 {
     int result;
     edgeType *x,*y;
     
     x=(edgeType*) xin;
     y=(edgeType*) yin;
-    result=x->tail - y->tail;
+    result = x->tail - y->tail;
     if (result!=0)
         return result;
     else
         return x->head - y->head;
 }
 
-void read_input_file()
+bool dfa_to_graph(DFA *M)
 {
-    int a,b,i,j;
-    edgeType work;
-    edgeType *ptr;
-    printf("Enter number of vertices,edges");
-    scanf("%d %d",&n,&e);
-    edgeTab=(edgeType*) malloc(e*sizeof(edgeType));
+    int i,j;
+    bool selfCyclesFound = false;
+    pTransitionRelation p_transitionRelation = dfaGetTransitionRelation(M);
+    //if we detect a self cycle then that is enough to abort looking for cycles
+    selfCyclesFound = p_transitionRelation->selfCycles;
+        
+        
+//    dfaPrintTransitionRelation(p_transitionRelation);
+    numOfNodes = p_transitionRelation->num_of_nodes;
+    numOfEdges = p_transitionRelation->num_of_edges;
+
+//    printf("Number of vertices = %d ,edges = %d\n",numOfNodes,numOfEdges);
+
+    edgeTab=(edgeType*) malloc((size_t) numOfEdges * sizeof(edgeType));
     if (!edgeTab)
     {
         printf("edgeTab malloc failed %dn",__LINE__);
@@ -345,25 +391,24 @@ void read_input_file()
     }
     
     // read edges
-    for (i=0; i<e; i++)
+    int e = 0;
+    for (i=0; i < numOfNodes; i++)
     {
-        printf("If a—>b then enter a,b: ");
-        scanf("%d %d",&a,&b);
-        if (a<0 || a>=n || b<0 || b>=n)
-        {
-            printf("Invalid input %d %d at %dn",a,b,__LINE__);
-            exit(0);
+        unsigned *nodeAdjList = p_transitionRelation->adjList[i];
+        for (j = 0; j < p_transitionRelation->degrees[i]; j++){
+            edgeTab[e].tail=i;
+            edgeTab[e].head=nodeAdjList[j];
+            e++;
         }
-        edgeTab[i].tail=a;
-        edgeTab[i].head=b;
     }
+    assert(e == numOfEdges);
     
     // sort edges
-    qsort(edgeTab,e,sizeof(edgeType),tailThenHead);
+    qsort(edgeTab,numOfEdges,sizeof(edgeType),tailThenHead);
     
     // Coalesce duplicates into a single edge
     j=0;
-    for (i=1; i<e; i++)
+    for (i=1; i<numOfEdges; i++)
         if (edgeTab[j].tail==edgeTab[i].tail
             && edgeTab[j].head==edgeTab[i].head)
             ;
@@ -373,52 +418,53 @@ void read_input_file()
             edgeTab[j].tail=edgeTab[i].tail;
             edgeTab[j].head=edgeTab[i].head;
         }
-    e=j+1;
+    numOfEdges=j+1;
     
     // For each vertex as a tail, determine first in range of edgeTab entries
-    firstEdge=(int*) malloc((n+1)*sizeof(int));
+    firstEdge=(int*) malloc((numOfNodes+1)*sizeof(int));
     if (!firstEdge)
     {
         printf("malloc failed %dn",__LINE__);
         exit(0);
     }
     j=0;
-    for (i=0; i<n; i++)
+    for (i=0; i<numOfNodes; i++)
     {
         firstEdge[i]=j;
         for ( ;
-             j<e && edgeTab[j].tail==i;
+             j<numOfEdges && edgeTab[j].tail==i;
              j++)
             ;
     }
-    firstEdge[n]=e;
+    firstEdge[numOfNodes]=numOfEdges;
+    
+    dfaFreeTransitionRelation(p_transitionRelation);
+    return false;
 }
 
 int finishIndex;
 
-void DFSvisit(int u)
+void DFSvisit(int node)
 {
     int i,v;
     
-    vertexStatus[u]=GRAY;
+    vertexStatus[node]=GRAY;
     
-    for (i=firstEdge[u];i<firstEdge[u+1];i++)
+    for (i=firstEdge[node];i<firstEdge[node+1];i++)
     {
         v=edgeTab[i].head;
         if (vertexStatus[v]==WHITE)
             DFSvisit(v);
     }
-    vertexStatus[u]=BLACK;
-    secondDFSrestarts[--finishIndex]=u;
+    vertexStatus[node]=BLACK;
+    secondDFSrestarts[--finishIndex]=node;
 }
 
 void reverseEdges()
 {
     int a,b,i,j;
-    edgeType work;
-    edgeType *ptr;
     
-    for (i=0; i<e; i++)
+    for (i=0; i<numOfEdges; i++)
     {
         a=edgeTab[i].tail;
         b=edgeTab[i].head;
@@ -427,7 +473,7 @@ void reverseEdges()
     }
     
     // sort edges
-    qsort(edgeTab,e,sizeof(edgeType),tailThenHead);
+    qsort(edgeTab,numOfEdges,sizeof(edgeType),tailThenHead);
     
     // For each vertex as a tail, determine first in range of edgeTab entries
     if (!firstEdge)
@@ -436,71 +482,268 @@ void reverseEdges()
         exit(0);
     }
     j=0;
-    for (i=0; i<n; i++)
+    for (i=0; i<numOfNodes; i++)
     {
         firstEdge[i]=j;
         for ( ;
-             j<e && edgeTab[j].tail==i;
+             j<numOfEdges && edgeTab[j].tail==i;
              j++)
             ;
     }
-    firstEdge[n]=e;
+    firstEdge[numOfNodes]=numOfEdges;
 }
 
-void DFSvisit2(int u)
+//returns true if it is called more than once. This indicates
+//an SCC of more than one node
+bool DFSvisit2(int node, int sink)
 {
     int i,v;
+    bool multipleCalls = false;
+    int state = (node < sink)? node : node + 1;
+//    printf("%d\n",state); // Indicate that node is in SCC for this restart
+    vertexStatus[node]=GRAY;
     
-    printf("%dn",u); // Indicate that u is in SCC for this restart
-    vertexStatus[u]=GRAY;
-    
-    for (i=firstEdge[u];i<firstEdge[u+1];i++)
+    for (i=firstEdge[node];i<firstEdge[node+1];i++)
     {
         v=edgeTab[i].head;
-        if (vertexStatus[v]==WHITE)
-            DFSvisit2(v);
+        if (vertexStatus[v]==WHITE){
+            multipleCalls = true;
+            DFSvisit2(v, sink);
+        }
     }
-    vertexStatus[u]=BLACK;
+    vertexStatus[node]=BLACK;
+    return multipleCalls;
 }
 
-int isLengthFiniteTarjan()
+bool isLengthFiniteTarjan(DFA *M)
 {
-    int u,i,j,k,nextDFS;
+    int node;
     int SCCcount=0;
+    bool sccFound = false;
     
-    read_input_file();
+    // we need sink just for printing
+    int sink = find_sink(M);
+    assert(sink >= 0);
     
-    vertexStatus=(int*) malloc(n*sizeof(int));
-    secondDFSrestarts=(int*) malloc(n*sizeof(int));
+    if (dfa_to_graph(M)){
+        printf("A self cycle has been found\n");
+        sccFound = true;
+    }
+
+    
+    vertexStatus=(int*) malloc(numOfNodes*sizeof(int));
+    secondDFSrestarts=(int*) malloc(numOfNodes*sizeof(int));
     if (!vertexStatus || !secondDFSrestarts)
     {
         printf("malloc failedn");
         exit(0);
     }
     // DFS code
-    for (u=0;u<n;u++)
-        vertexStatus[u]=WHITE;
-    finishIndex=n;
-    for (u=0;u<n;u++)
-        if (vertexStatus[u]==WHITE)
-            DFSvisit(u);
+    for (node=0;node<numOfNodes;node++)
+        vertexStatus[node]=WHITE;
+    finishIndex=numOfNodes;
+    for (node=0;node<numOfNodes;node++)
+        if (vertexStatus[node]==WHITE)
+            DFSvisit(node);
     
     reverseEdges();
     
     // DFS code
-    for (u=0;u<n;u++)
-        vertexStatus[u]=WHITE;
-    for (i=0;i<n;i++)
-        if (vertexStatus[secondDFSrestarts[i]]==WHITE)
+    for (node=0;node<numOfNodes;node++)
+        vertexStatus[node]=WHITE;
+    for (node=0;node<numOfNodes;node++)
+        if (vertexStatus[secondDFSrestarts[node]]==WHITE)
         {
             SCCcount++;
-            printf("Strongly Connected Component %dn",SCCcount);
-            DFSvisit2(secondDFSrestarts[i]);
+//            printf("Strongly Connected Component %d\n",SCCcount);
+            if(DFSvisit2(secondDFSrestarts[node], sink) == true){
+//                printf("Found a real SCC on node %d\n", node);
+                sccFound = true;
+            }
+            
         }
     
     free(edgeTab);
     free(firstEdge);
     free(vertexStatus);
     free(secondDFSrestarts);
-    return 0;
+    return !sccFound;
 }
+
+
+typedef struct _NodeLengths {
+    unsigned *lengths;
+    unsigned size;
+    unsigned index;
+    bool visited;
+    unsigned numOfPaths;
+} NodeLengths, *P_NodeLengths;
+
+void freeNodeLengths(P_NodeLengths nodeLengths){
+    if (nodeLengths->size > 0)
+        free(nodeLengths->lengths);
+    free(nodeLengths);
+}
+
+
+// inclusive indices
+//   0 <= imin when using truncate toward zero divide
+//     imid = (imin+imax)/2;
+//   imin unrestricted when using truncate toward minus infinity divide
+//     imid = (imin+imax)>>1; or
+//     imid = (int)floor((imin+imax)/2.0);
+bool isAcceptState(unsigned acceptStates[], unsigned keyState, unsigned imin, unsigned imax)
+{
+    // continually narrow search until just one element remains
+    while (imin < imax)
+    {
+
+        int imid = (imax + imin)/2;
+        // code must guarantee the interval is reduced at each iteration
+        assert(imid < imax);
+        // note: 0 <= imin < imax implies imid will always be less than imax
+        
+        // reduce the search
+        if (acceptStates[imid] < keyState)
+            imin = imid + 1;
+        else
+            imax = imid;
+    }
+    // At exit of while:
+    //   if A[] is empty, then imax < imin
+    //   otherwise imax == imin
+    
+    // deferred test for equality
+    if ((imax == imin) && (acceptStates[imin] == keyState))
+        return true;
+    else
+        return false;
+}
+
+bool isNewLength(P_NodeLengths nodeLengths, unsigned len){
+    int i;
+    for (i = 0; i < nodeLengths->index; i++){
+        if (len == nodeLengths->lengths[i])
+            return false;
+    }
+    return true;
+}
+
+void addLengthToNodeLengths(P_NodeLengths nodeLengths, unsigned len){
+    assert(!(nodeLengths->index > 0 && nodeLengths->lengths == NULL));
+    //if first time visiting this node then init nodeLengths then add len
+    if (nodeLengths->lengths == NULL){
+        fflush(stdout);
+        nodeLengths->index = 0;
+        nodeLengths->size = 32;
+        nodeLengths->lengths = (unsigned*) mem_alloc((size_t) nodeLengths->size * sizeof(unsigned));
+        mem_zero(nodeLengths->lengths, (size_t) nodeLengths->size * sizeof(unsigned));
+        nodeLengths->lengths[nodeLengths->index] = len;
+        (nodeLengths->index)++;
+    }
+    else {
+        //add new length
+        if (isNewLength(nodeLengths, len)){
+            nodeLengths->lengths[nodeLengths->index] = len;
+            (nodeLengths->index)++;
+            //need resize
+            if (nodeLengths->index == nodeLengths->size){
+                nodeLengths->size *= 2;
+                printf("new size = %u\n", nodeLengths->size);
+                nodeLengths->lengths = (unsigned*) mem_resize(nodeLengths->lengths, (size_t) nodeLengths->size * sizeof(unsigned));
+                mem_zero(nodeLengths->lengths + nodeLengths->index, (size_t) (nodeLengths->size - nodeLengths->index) * sizeof(unsigned));
+            }
+        }
+    }
+}
+
+void getLengthsHelper(DFA *M, pTransitionRelation p_transitionRelation, unsigned currentNode, P_NodeLengths * nodesLengths){
+//    printf("%u, ", (currentNode < p_transitionRelation->sink)?currentNode : currentNode + 1);
+
+    //if current state is accept state then register length before moving on with DFS
+    if (isAcceptState(p_transitionRelation->accepts, currentNode, 0, p_transitionRelation->acceptsSize - 1)){
+        addLengthToNodeLengths(nodesLengths[currentNode], 0);
+    }
+    
+    unsigned succNodeIndex;
+    // if current node has out edges
+    if (p_transitionRelation->degrees[currentNode] > 0){
+        for (succNodeIndex = 0; succNodeIndex < p_transitionRelation->degrees[currentNode]; succNodeIndex++){
+            unsigned succNode = p_transitionRelation->adjList[currentNode][succNodeIndex];
+            //first time to see next node --> carry on DFS
+            if (nodesLengths[succNode]->visited == false){
+                nodesLengths[succNode]->visited = true;
+                getLengthsHelper(M, p_transitionRelation, succNode, nodesLengths);
+            }
+            int i;
+            assert(nodesLengths[succNode] != NULL);
+            for (i = 0; i < nodesLengths[succNode]->index; i++ ){
+                addLengthToNodeLengths(nodesLengths[currentNode], nodesLengths[succNode]->lengths[i] + 1);
+                nodesLengths[currentNode]->numOfPaths += nodesLengths[succNode]->numOfPaths;
+            }
+        }
+        if (nodesLengths[currentNode]->index > 0){
+            nodesLengths[currentNode]->lengths = (unsigned*) mem_resize(nodesLengths[currentNode]->lengths, (size_t) nodesLengths[currentNode]->index * sizeof(unsigned));
+            nodesLengths[currentNode]->size = nodesLengths[currentNode]->index;
+        }
+    }
+    else
+        nodesLengths[currentNode]->numOfPaths = 1;
+}
+
+/**
+ This only works if the graph does not have cycles in it.
+ If this hits a cycle then it will not halt.
+ Call isLengthFiniteTarjan first and make sure it returns 
+ true before calling this
+ */
+P_DFAFiniteLengths dfaGetLengthsFiniteLang(DFA *M){
+    pTransitionRelation p_transitionRelation = dfaGetTransitionRelation(M);
+    dfaPrintTransitionRelation(p_transitionRelation);
+    unsigned startState = (M->s < p_transitionRelation->sink)? M->s : M->s + 1;
+    int i;
+    printf("accepting states: ");
+    for (i = 0; i < p_transitionRelation->acceptsSize; i++)
+        printf("%u, ", (p_transitionRelation->accepts[i] < p_transitionRelation->sink)?
+               p_transitionRelation->accepts[i] : p_transitionRelation->accepts[i] + 1);
+    printf("\n");
+    fflush(stdout);
+    P_NodeLengths * nodesLengths = (P_NodeLengths *) mem_alloc((size_t) p_transitionRelation->num_of_nodes * sizeof(P_NodeLengths));
+    mem_zero(nodesLengths, (size_t)p_transitionRelation->num_of_nodes * sizeof(P_NodeLengths));
+    
+
+    for (i = 0; i < p_transitionRelation->num_of_nodes; i++){
+        nodesLengths[i] = (P_NodeLengths) mem_alloc(sizeof(NodeLengths));
+        nodesLengths[i]->size = 0;
+        nodesLengths[i]->index = 0;
+        nodesLengths[i]->lengths = NULL;
+        nodesLengths[i]->visited = false;
+        nodesLengths[i]->numOfPaths = 0;
+    }
+
+    getLengthsHelper(M, p_transitionRelation, startState, nodesLengths);
+
+    P_DFAFiniteLengths pDFAFiniteLengths = (P_DFAFiniteLengths) mem_alloc(sizeof(DFAFiniteLengths));
+    pDFAFiniteLengths->size = nodesLengths[0]->size;
+    pDFAFiniteLengths->lengths = nodesLengths[0]->lengths;
+    
+    printf("\n\nnumber of paths = %u\n\n", nodesLengths[0]->numOfPaths);
+    free(nodesLengths[0]);
+    for (i = 1; i < p_transitionRelation->num_of_nodes; i++){
+        int j;
+//        printf("lengths for node %u:", (i < p_transitionRelation->sink)? i : i + 1);
+        for (j = 0; j < nodesLengths[i]->index; j++){
+//            printf("%u, ", nodesLengths[i]->lengths[j]);
+        }
+//        printf("\n");
+        freeNodeLengths(nodesLengths[i]);
+    }
+    free(nodesLengths);
+    dfaFreeTransitionRelation(p_transitionRelation);
+    
+    return pDFAFiniteLengths;
+}
+
+
+
+

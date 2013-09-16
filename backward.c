@@ -85,7 +85,7 @@ DFA* dfa_pre_concat_const(DFA* ML, char* str, int pos, int var, int* indices){
   DFA* suf;
   DFA* pre;
   DFA* Ma = dfaAllStringASCIIExceptReserveWords(var, indices);
-  int n = strlen(str);
+  int n = (int)strlen(str);
   if(n==0) return ML;
   if(pos==1){ //Precise Construction
 	pre = dfa_intersect(ML, dfa_concat_extrabit(Ma, dfa_construct_string(str, var, indices), var, indices));

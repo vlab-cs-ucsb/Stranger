@@ -19,6 +19,10 @@
 		778FD1AB17CE85FE005172F4 /* stranger.h in Headers */ = {isa = PBXBuildFile; fileRef = 778FD1A217CE85FE005172F4 /* stranger.h */; };
 		778FD1AC17CE85FE005172F4 /* test.c in Sources */ = {isa = PBXBuildFile; fileRef = 778FD1A317CE85FE005172F4 /* test.c */; };
 		778FD1AD17CE85FE005172F4 /* widening.c in Sources */ = {isa = PBXBuildFile; fileRef = 778FD1A417CE85FE005172F4 /* widening.c */; };
+		77A28C3417DC79BA00394F7B /* libmonamem.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 77A28C3317DC79BA00394F7B /* libmonamem.1.dylib */; };
+		77A28C3617DC79DA00394F7B /* libmonadfa.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 77A28C3517DC79DA00394F7B /* libmonadfa.1.dylib */; };
+		77A28C3817DC79F800394F7B /* libmonabdd.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 77A28C3717DC79F800394F7B /* libmonabdd.1.dylib */; };
+		77BE706217E3C5FB0026A6ED /* graph.c in Sources */ = {isa = PBXBuildFile; fileRef = 77BE706117E3C5FB0026A6ED /* graph.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +39,10 @@
 		778FD1A217CE85FE005172F4 /* stranger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stranger.h; sourceTree = "<group>"; };
 		778FD1A317CE85FE005172F4 /* test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = test.c; sourceTree = "<group>"; };
 		778FD1A417CE85FE005172F4 /* widening.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = widening.c; sourceTree = "<group>"; };
+		77A28C3317DC79BA00394F7B /* libmonamem.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmonamem.1.dylib; path = ../../Documents/temp/mona/MONA/Mem/.libs/libmonamem.1.dylib; sourceTree = "<group>"; };
+		77A28C3517DC79DA00394F7B /* libmonadfa.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmonadfa.1.dylib; path = ../../Documents/temp/mona/MONA/DFA/.libs/libmonadfa.1.dylib; sourceTree = "<group>"; };
+		77A28C3717DC79F800394F7B /* libmonabdd.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmonabdd.1.dylib; path = ../../Documents/temp/mona/MONA/BDD/.libs/libmonabdd.1.dylib; sourceTree = "<group>"; };
+		77BE706117E3C5FB0026A6ED /* graph.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = graph.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +50,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				77A28C3817DC79F800394F7B /* libmonabdd.1.dylib in Frameworks */,
+				77A28C3617DC79DA00394F7B /* libmonadfa.1.dylib in Frameworks */,
+				77A28C3417DC79BA00394F7B /* libmonamem.1.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -51,6 +62,10 @@
 		778FD18617CE85A3005172F4 = {
 			isa = PBXGroup;
 			children = (
+				77BE706117E3C5FB0026A6ED /* graph.c */,
+				77A28C3717DC79F800394F7B /* libmonabdd.1.dylib */,
+				77A28C3517DC79DA00394F7B /* libmonadfa.1.dylib */,
+				77A28C3317DC79BA00394F7B /* libmonamem.1.dylib */,
 				778FD19C17CE85FE005172F4 /* multi_signature_generator.c */,
 				778FD19D17CE85FE005172F4 /* multi_track.c */,
 				778FD19E17CE85FE005172F4 /* pre_suffix.c */,
@@ -148,6 +163,7 @@
 				778FD1AA17CE85FE005172F4 /* stranger_lib.c in Sources */,
 				778FD1AC17CE85FE005172F4 /* test.c in Sources */,
 				778FD1AD17CE85FE005172F4 /* widening.c in Sources */,
+				77BE706217E3C5FB0026A6ED /* graph.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,7 +219,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -220,45 +236,56 @@
 		778FD19417CE85A3005172F4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
-					/Users/muath/Documents/workspaceCDT/mona/BDD,
-					/Users/muath/Documents/workspaceCDT/mona/Mem,
-					/Users/muath/Documents/workspaceCDT/mona/DFA,
-					/Users/muath/Documents/workspaceCDT/mona/Lib,
+					/Users/muath/Documents/temp/mona/MONA/BDD,
+					/Users/muath/Documents/temp/mona/MONA/Mem,
+					/Users/muath/Documents/temp/mona/MONA/DFA,
+					/Users/muath/Documents/temp/mona/MONA/Lib,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"/Users/muath/Documents/workspaceCDT/mona/BDD/.libs\"",
-					"\"/Users/muath/Documents/workspaceCDT/mona/Mem/.libs\"",
-					"\"/Users/muath/Documents/workspaceCDT/mona/DFA/.libs\"",
+					"\"$(SRCROOT)/../../Documents/temp/mona/MONA/Mem/.libs\"",
+					"\"$(SRCROOT)/../../Documents/temp/mona/MONA/DFA/.libs\"",
+					"\"$(SRCROOT)/../../Documents/temp/mona/MONA/BDD/.libs\"",
 				);
-				"OTHER_LDFLAGS[arch=*]" = (
+				OTHER_LDFLAGS = (
 					"-lmonabdd",
 					"-lmonadfa",
 					"-lmonamem",
 				);
+				"OTHER_LDFLAGS[arch=*]" = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "i386 x86_64";
 			};
 			name = Debug;
 		};
 		778FD19517CE85A3005172F4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				EXECUTABLE_PREFIX = lib;
 				HEADER_SEARCH_PATHS = (
-					/Users/muath/Documents/workspaceCDT/mona/BDD,
-					/Users/muath/Documents/workspaceCDT/mona/Mem,
-					/Users/muath/Documents/workspaceCDT/mona/DFA,
-					/Users/muath/Documents/workspaceCDT/mona/Lib,
+					/Users/muath/Documents/temp/mona/MONA/BDD,
+					/Users/muath/Documents/temp/mona/MONA/Mem,
+					/Users/muath/Documents/temp/mona/MONA/DFA,
+					/Users/muath/Documents/temp/mona/MONA/Lib,
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"/Users/muath/Documents/workspaceCDT/mona/BDD/.libs\"",
-					"\"/Users/muath/Documents/workspaceCDT/mona/Mem/.libs\"",
-					"\"/Users/muath/Documents/workspaceCDT/mona/DFA/.libs\"",
+					"\"$(SRCROOT)/../../Documents/temp/mona/MONA/Mem/.libs\"",
+					"\"$(SRCROOT)/../../Documents/temp/mona/MONA/DFA/.libs\"",
+					"\"$(SRCROOT)/../../Documents/temp/mona/MONA/BDD/.libs\"",
 				);
+				OTHER_LDFLAGS = (
+					"-lmonabdd",
+					"-lmonadfa",
+					"-lmonamem\n-lmonabdd",
+				);
+				"OTHER_LDFLAGS[arch=*]" = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "i386 x86_64";
 			};
 			name = Release;
 		};
@@ -281,6 +308,7 @@
 				778FD19517CE85A3005172F4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -8,11 +8,14 @@
 #include "stranger.h"
 #include "stranger_lib_internal.h"
 #include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <limits.h>
+
 
 /*=====================================================================*/
 /* Data structure for transition relation matrix
 */
-
 
 void removeTransitionOnChar(char* transitions, char* charachter, int var, char** result, int* pSize);
 
@@ -133,7 +136,7 @@ struct transition_type *transition_dequeue(struct transition_list_type *list)
 	struct transition_type *data = NULL;
 	struct transition_type *i = NULL;
 	if ((list == NULL) || (list->count == 0))
-		return -1;
+		return NULL;
 	else
 		data = list->head;
 	if (list->count == 1) {
@@ -149,8 +152,8 @@ struct transition_type *transition_dequeue(struct transition_list_type *list)
 }
 
 void transition_free_ilt(struct transition_list_type *list) {
-	int tmp = transition_dequeue(list);
-	while (tmp != -1)
+	struct transition_type *tmp = transition_dequeue(list);
+	while (tmp != NULL)
 		tmp = transition_dequeue(list);
 	free(list);
 }
@@ -168,16 +171,15 @@ void transition_print_ilt(struct transition_list_type *list) {
 }
 
 
-
 DFA *dfaPreRightTrim(DFA *M, char c, int var, int *oldIndices) {
 	DFA *result;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k;
 	char *exeps;
 	int *to_states;
 	int sink;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len;
 	int ns = M->ns;
@@ -264,58 +266,17 @@ DFA *dfaPreRightTrim(DFA *M, char c, int var, int *oldIndices) {
 	return tmpM;
 }
 
-void testPreRightTrim(){
-	int* indices_main = (int *) allocateAscIIIndexWithExtraBit(NUM_ASCII_TRACKS);
-	int var = NUM_ASCII_TRACKS;
-	dfaSetup(5, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(1);
-	dfaStoreException(1, "XXXXXXXX");
-	dfaStoreState(4);
-
-	//s1
-	dfaAllocExceptions(1);
-	dfaStoreException(2, "01100001");//'a'
-	dfaStoreState(4);
-
-	//s2
-	dfaAllocExceptions(1);
-	dfaStoreException(3, "01100001");//'a'
-	dfaStoreState(4);
-
-	//s3
-	dfaAllocExceptions(1);
-	dfaStoreException(2, "00100000");//' '
-	dfaStoreState(4);
-
-	//s4 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(4);
-
-	DFA* dfa = dfaBuild("000+-");
-
-	printf("dfaSimpleBeforePreRightTrim:\n");
-	dfaPrintGraphviz(dfa, var, indices_main);
-
-	DFA* trimmed = dfaPreRightTrim(dfa, ' ', var, indices_main);
-	printf("dfaSimpleAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	dfaFree(dfa); dfa = NULL;
-	dfaFree(trimmed); trimmed = NULL;
-
-}
 
 
 DFA *dfaPreLeftTrim(DFA *M, char c, int var, int *oldIndices) {
 	DFA *result;
 	paths state_paths, pp;
 	trace_descr tp;
-	int i, j;
+	int i, j, k;
 	char *exeps;
 	int *to_states;
 	int sink;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len;
 	int ns = M->ns;
@@ -460,7 +421,7 @@ struct transition_list_type *getTransitionRelationMatrix(DFA* M, char *lambda,
 		int var, int* indices) {
 	paths state_paths, pp;
 	trace_descr tp;
-	int j, current;
+	int j;
 	int sink = find_sink(M);
 	char *symbol = (char *) malloc((var+1)*sizeof(char));
 	struct transition_list_type *finallist = NULL;
@@ -563,11 +524,11 @@ DFA *dfaRightTrim(DFA *M, char c, int var, int *oldindices) {
 	paths state_paths, pp;
 	trace_descr tp;
 
-	int i, j, z;
+	int i, j, z, k;
 
 	char *exeps;
 	int *to_states;
-	long max_exeps, k;
+	long max_exeps;
 	char *statuces;
 	int len = var;
 	int sink, new_accept_state;
@@ -701,7 +662,7 @@ DFA *dfaRightTrim(DFA *M, char c, int var, int *oldindices) {
 	// if original accept epsilon or start state reaches an accept state on lambda (\s+ is an element of L(M))
     //then add epsilon to language
 	if (M->f[M->s] == 1 || check_value(states, M->s)){
-		tmpM = dfa_union_empty_M(result);
+		tmpM = dfa_union_empty_M(result, var, indices);
 		dfaFree(result); result = NULL;
 		result = tmpM;
 	}
@@ -719,396 +680,6 @@ DFA *dfaRightTrim(DFA *M, char c, int var, int *oldindices) {
 
 }
 
-void testRightTrim(){
-	int* indices_main = (int *) allocateAscIIIndexWithExtraBit(NUM_ASCII_TRACKS);
-	int var = NUM_ASCII_TRACKS;
-	DFA* trimmedTest;
-
-	dfaSetup(5, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(1);
-	dfaStoreException(1, "XXXXXXXX");
-	dfaStoreState(4);
-
-	//s1
-	dfaAllocExceptions(1);
-	dfaStoreException(2, "01100001");
-	dfaStoreState(4);
-
-	//s2
-	dfaAllocExceptions(1);
-	dfaStoreException(3, "00100000");
-	dfaStoreState(4);
-
-	//s3
-	dfaAllocExceptions(0);
-	dfaStoreState(4);
-
-	//s4 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(4);
-
-	DFA* dfa = dfaBuild("---+-");
-
-	printf("dfaSimpleBeforeTrim:\n");
-	dfaPrintGraphviz(dfa, var, indices_main);
-
-	DFA* trimmed = dfaRightTrim(dfa, ' ', var, indices_main);
-	printf("dfaSimpleAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-
-	dfaSetup(5, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(1);
-	dfaStoreException(1, "XXXXXXXX");
-	dfaStoreState(3);
-
-	//s1
-	dfaAllocExceptions(1);
-	dfaStoreException(2, "01100001");
-	dfaStoreState(3);
-
-	//s2
-	dfaAllocExceptions(0);
-	dfaStoreState(3);
-
-	//s3 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(3);
-
-	trimmedTest = dfaBuild("--+-");
-
-	assert(check_equivalence(trimmed, trimmedTest, var, indices_main));
-	dfaFree(trimmedTest);
-	dfaFree(dfa);
-	dfaFree(trimmed);
-
-	dfaSetup(1, var, indices_main);
-	dfaAllocExceptions(0);
-	dfaStoreState(0);
-	DFA* empty = dfaBuild("-");
-	printf("dfaBeforeTrim:\n");
-	dfaPrintGraphviz(empty, var, indices_main);
-	trimmed = dfaRightTrim(empty, ' ', var, indices_main);
-	printf("dfaAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	assert(check_equivalence(trimmed, empty, var, indices_main));
-	free(empty);
-	free(trimmed);
-//
-	DFA* aSpaceb = dfa_construct_string("a b", var, indices_main);
-	printf("dfa_aSpaceb_BeforeTrim:\n");
-	dfaPrintGraphviz(aSpaceb, var, indices_main);
-	trimmed = dfaRightTrim(aSpaceb, ' ', var, indices_main);
-	printf("dfa_aSpaceb_AfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	assert(check_equivalence(trimmed, aSpaceb, var, indices_main));
-	dfaFree(aSpaceb);
-	dfaFree(trimmed);
-
-	DFA* abSpace = dfa_construct_string("ab ", var, indices_main);
-	printf("dfa_abSpace_BeforeTrim:\n");
-	dfaPrintGraphviz(abSpace, var, indices_main);
-	trimmed = dfaRightTrim(abSpace, ' ', var, indices_main);
-	printf("dfa_abSpace_AfterTrim:\n\n\n\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	DFA* ab = dfa_construct_string("ab", var, indices_main);
-	assert(check_equivalence(trimmed, ab, var, indices_main));
-	dfaFree(ab);
-	dfaFree(abSpace);
-	dfaFree(trimmed);
-
-	char* ltrA = bintostr('A', var);
-	char* ltrB = bintostr('B', var);
-	char* ltra = bintostr('a', var);
-	char* ltrb = bintostr('b', var);
-	char* ltrz = bintostr('z', var);
-	char* ltrSpace = bintostr(' ', var);
-
-	dfaSetup(9, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(5);
-	dfaStoreException(1, ltrA);
-	dfaStoreException(1, ltrb);
-	dfaStoreException(1, ltrz);
-	dfaStoreException(1, ltrSpace);
-	dfaStoreException(1, ltra);
-	dfaStoreState(8);
-
-	//s1
-	dfaAllocExceptions(4);
-	dfaStoreException(2, ltrA);
-	dfaStoreException(2, ltrb);
-	dfaStoreException(2, ltrz);
-	dfaStoreException(2, ltra);
-	dfaStoreState(8);
-
-	//s2
-	dfaAllocExceptions(5);
-	dfaStoreException(3, ltrA);
-	dfaStoreException(3, ltrb);
-	dfaStoreException(3, ltrz);
-	dfaStoreException(3, ltrSpace);
-	dfaStoreException(3, ltrB);
-	dfaStoreState(8);
-
-	//s3
-	dfaAllocExceptions(3);
-	dfaStoreException(4, ltrA);
-	dfaStoreException(4, ltrSpace);
-	dfaStoreException(4, ltra);
-	dfaStoreState(8);
-
-	//s4
-	dfaAllocExceptions(1);
-	dfaStoreException(5, ltrSpace);
-	dfaStoreState(8);
-
-	//s5
-	dfaAllocExceptions(2);
-	dfaStoreException(6, ltrb);
-	dfaStoreException(6, ltrSpace);
-	dfaStoreState(8);
-
-	//s6
-	dfaAllocExceptions(4);
-	dfaStoreException(7, ltrA);
-	dfaStoreException(7, ltrb);
-	dfaStoreException(7, ltrz);
-	dfaStoreException(7, ltrSpace);
-	dfaStoreState(8);
-
-	//s7 -- accept
-	dfaAllocExceptions(0);
-	dfaStoreState(8);
-
-	//s8 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(8);
-
-	DFA* complex = dfaBuild("-------+-");
-	printf("dfa_Complex1_BeforeTrim:\n");
-	dfaPrintGraphviz(complex, var, indices_main);
-	trimmed = dfaRightTrim(complex, ' ', var, indices_main);
-	printf("dfa_Complex1_AfterTrim:\n\n\n\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	dfaFree(complex);
-	dfaFree(trimmed);
-
-	dfaSetup(11, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(1);
-	dfaStoreException(1, ltra);
-	dfaStoreState(10);
-
-	//s1
-	dfaAllocExceptions(2);
-	dfaStoreException(2, ltrb);
-	dfaStoreException(7, ltrSpace);
-	dfaStoreState(10);
-
-	//s2
-	dfaAllocExceptions(3);
-	dfaStoreException(3, ltra);
-	dfaStoreException(3, ltrSpace);
-	dfaStoreException(6, ltrb);
-	dfaStoreState(10);
-
-	//s3
-	dfaAllocExceptions(2);
-	dfaStoreException(4, ltra);
-	dfaStoreException(4, ltrSpace);
-	dfaStoreState(10);
-
-	//s4
-	dfaAllocExceptions(2);
-	dfaStoreException(3, ltra);
-	dfaStoreException(5, ltrSpace);
-	dfaStoreState(10);
-
-	//s5 - accept state 1
-	dfaAllocExceptions(0);
-	dfaStoreState(10);
-
-	//s6
-	dfaAllocExceptions(2);
-	dfaStoreException(7, ltrb);
-	dfaStoreException(4, ltrSpace);
-	dfaStoreState(10);
-
-	//s7
-	dfaAllocExceptions(2);
-	dfaStoreException(8, ltrSpace);
-	dfaStoreException(9, ltrb);
-	dfaStoreState(10);
-
-	//s8 - accept state 2
-	dfaAllocExceptions(2);
-	dfaStoreException(7, ltrSpace);
-	dfaStoreException(7, ltrb);
-	dfaStoreState(10);
-
-	//s9 - accept state 3
-	dfaAllocExceptions(0);
-	dfaStoreState(10);
-
-	//s10 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(10);
-
-
-	complex = dfaBuild("00000+00++-");
-	printf("dfa_Complex2_BeforeTrim:\n");
-	dfaPrintGraphviz(complex, var, indices_main);
-	trimmed = dfaRightTrim(complex, ' ', var, indices_main);
-	printf("dfa_Complex2_AfterTrim:\n\n\n\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	dfaFree(complex);
-	dfaFree(trimmed);
-
-	dfaSetup(15, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(3);
-	dfaStoreException(1, ltrb);
-	dfaStoreException(1, ltrSpace);
-	dfaStoreException(6, ltra);
-	dfaStoreState(14);
-
-	//s1
-	dfaAllocExceptions(3);
-	dfaStoreException(2, ltrb);
-	dfaStoreException(2, ltrSpace);
-	dfaStoreException(3, ltra);
-	dfaStoreState(14);
-
-	//s2
-	dfaAllocExceptions(2);
-	dfaStoreException(4, ltra);
-	dfaStoreException(4, ltrSpace);
-	dfaStoreState(14);
-
-	//s3
-	dfaAllocExceptions(2);
-	dfaStoreException(4, ltra);
-	dfaStoreException(4, ltrSpace);
-	dfaStoreState(14);
-
-	//s4
-	dfaAllocExceptions(2);
-	dfaStoreException(5, ltra);
-	dfaStoreException(5, ltrSpace);
-	dfaStoreState(14);
-
-	//s5 - accept state 1
-	dfaAllocExceptions(2);
-	dfaStoreException(5, ltrSpace);
-	dfaStoreException(2, ltra);
-	dfaStoreState(14);
-
-	//s6
-	dfaAllocExceptions(3);
-	dfaStoreException(11, ltrb);
-	dfaStoreException(7, ltrz);
-	dfaStoreException(9, ltra);
-	dfaStoreState(14);
-
-	//s7
-	dfaAllocExceptions(2);
-	dfaStoreException(8, ltrSpace);
-	dfaStoreException(8, ltra);
-	dfaStoreState(14);
-
-	//s8
-	dfaAllocExceptions(2);
-	dfaStoreException(5, ltrSpace);
-	dfaStoreException(5, ltra);
-	dfaStoreState(14);
-
-	//s9
-	dfaAllocExceptions(2);
-	dfaStoreException(10, ltrSpace);
-	dfaStoreException(10, ltrb);
-	dfaStoreState(14);
-
-	//s10
-	dfaAllocExceptions(2);
-	dfaStoreException(13, ltrSpace);
-	dfaStoreException(9, ltra);
-	dfaStoreState(14);
-
-	//s11
-	dfaAllocExceptions(2);
-	dfaStoreException(9, ltra);
-	dfaStoreException(12, ltrb);
-	dfaStoreState(14);
-
-	//s12
-	dfaAllocExceptions(2);
-	dfaStoreException(10, ltrSpace);
-	dfaStoreException(10, ltra);
-	dfaStoreState(14);
-
-	//s13 - accept satate 2
-	dfaAllocExceptions(1);
-	dfaStoreException(5, ltrSpace);
-	dfaStoreState(14);
-
-	//s14 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(14);
-
-
-	complex = dfaBuild("00000+0000000+-");
-	printf("dfa_Complex3_BeforeTrim:\n");
-	dfaPrintGraphviz(complex, var, indices_main);
-	trimmed = dfaRightTrim(complex, ' ', var, indices_main);
-	printf("dfa_Complex3_AfterTrim:\n\n\n\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	DFA* fourS = dfa_construct_string("    ", var, indices_main);
-	assert(!check_intersection(trimmed, fourS, var, indices_main));
-	DFA* bfourS = dfa_construct_string("b    ", var, indices_main);
-	assert(!check_intersection(trimmed, bfourS, var, indices_main));
-	DFA* azaS = dfa_construct_string("aza ", var, indices_main);
-	assert(!check_intersection(trimmed, azaS, var, indices_main));
-	DFA* a = dfa_construct_string("a", var, indices_main);
-	assert(!check_intersection(trimmed, a, var, indices_main));
-	ab = dfa_construct_string("ab", var, indices_main);
-	assert(!check_intersection(trimmed, ab, var, indices_main));
-	DFA* aa = dfa_construct_string("aa", var, indices_main);
-	assert(check_intersection(trimmed, aa, var, indices_main));
-	DFA* Sa = dfa_construct_string("   a", var, indices_main);
-	assert(check_intersection(trimmed, Sa, var, indices_main));
-	DFA* SaSa = dfa_construct_string(" a a", var, indices_main);
-	assert(check_intersection(trimmed, SaSa, var, indices_main));
-	DFA* abbSSSSSaaa = dfa_construct_string("abb     aaa", var, indices_main);
-	assert(check_intersection(trimmed, abbSSSSSaaa, var, indices_main));
-	dfaFree(bfourS);
-	dfaFree(azaS);
-	dfaFree(a);
-	dfaFree(ab);
-	dfaFree(aa);
-	dfaFree(Sa);
-	dfaFree(SaSa);
-	dfaFree(abbSSSSSaaa);
-	dfaFree(fourS);
-	dfaFree(complex);
-	dfaFree(trimmed);
-
-    //we need more test
-
-
-	free(ltrA);
-	free(ltrB);
-	free(ltra);
-	free(ltrb);
-	free(ltrz);
-	free(ltrSpace);
-}
 
 
 
@@ -1222,11 +793,11 @@ DFA *dfaLeftTrim(DFA *M, char c, int var, int *oldindices)
   paths state_paths, pp;
   trace_descr tp;
 
-  int i, j, z;
+  int i, j, z, k;
 
   char *exeps;
   int *to_states;
-  long max_exeps, k;
+  long max_exeps;
   char *statuces;
   int len=var;
   int sink;
@@ -1464,234 +1035,11 @@ size_t trimwhitespace(char *out, size_t len, const char *str)
   return out_size;
 }
 
-void testLeftTrim(){
-	int* indices_main = (int *) allocateAscIIIndexWithExtraBit(NUM_ASCII_TRACKS);
-	int var = NUM_ASCII_TRACKS;
-	int i, j, k;
-	char* trimmeds;
-	DFA* trimmed, *dfaString;
-
-
-	printf("running testLeftTrim()\n\n");
-
-	dfaSetup(5, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(1);
-	dfaStoreException(1, "XXXXXXXX");
-	dfaStoreState(4);
-
-	//s1
-	dfaAllocExceptions(1);
-	dfaStoreException(2, "00100000");
-	dfaStoreState(4);
-
-	//s2
-	dfaAllocExceptions(1);
-	dfaStoreException(3, "01100001");
-	dfaStoreState(4);
-
-	//s3
-	dfaAllocExceptions(0);
-	dfaStoreState(4);
-
-	//s4 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(4);
-
-	DFA* dfa = dfaBuild("000+-");
-
-	printf("dfaBeforeTrim:\n");
-	dfaPrintGraphviz(dfa, var, indices_main);
-
-	trimmed = dfaLeftTrim(dfa, ' ', var, indices_main);
-	printf("dfaAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	dfaFree(dfa);
-	dfaFree(trimmed);
-
-	printf("test1 passed\n\n\n");
-
-	dfaSetup(1, var, indices_main);
-	dfaAllocExceptions(0);
-	dfaStoreState(0);
-	DFA* empty = dfaBuild("-");
-	printf("dfaBeforeTrim:\n");
-	dfaPrintGraphviz(empty, var, indices_main);
-	trimmed = dfaLeftTrim(empty, ' ', var, indices_main);
-	printf("dfaAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	dfaFree(empty);
-	dfaFree(trimmed);
-
-	printf("test2 passed\n\n\n");
-
-
-	DFA* aSpaceb = dfa_construct_string("a b", var, indices_main);
-	printf("dfaBeforeTrim:\n");
-	dfaPrintGraphviz(aSpaceb, var, indices_main);
-	trimmed = dfaLeftTrim(aSpaceb, "00100000", var, indices_main);
-	printf("dfaAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-	assert(check_equivalence(aSpaceb, trimmed, var, indices_main));
-	dfaFree(aSpaceb);
-	dfaFree(trimmed);
-
-	printf("test3 passed\n\n\n");
-
-
-	char** chars = (char**)malloc(256 * sizeof(char*));
-	for (i = 0; i < 256; i++){
-		chars[i] = bintostr((char)i, var);
-	}
-
-	dfaSetup(9, var, indices_main);
-
-	//s0
-	dfaAllocExceptions(2);
-	dfaStoreException(1, "X0X0X0X0");
-	dfaStoreException(6, chars['a']);
-	dfaStoreState(8);
-
-	//s1
-	dfaAllocExceptions(2);
-	dfaStoreException(2, "XX10XX00");
-	dfaStoreException(0, chars['a']);
-	dfaStoreState(8);
-
-	//s2
-	dfaAllocExceptions(2);
-	dfaStoreException(3, "XXX0XXX0");
-	dfaStoreException(1, chars['A']);
-	dfaStoreState(8);
-
-	//s3
-	dfaAllocExceptions(3);
-	dfaStoreException(1, chars['A']);
-	dfaStoreException(0, "0010XXXX");
-	dfaStoreException(4, chars['a']);
-	dfaStoreState(8);
-
-	//s4
-	dfaAllocExceptions(1);
-	dfaStoreException(5, chars['b']);
-	dfaStoreState(8);
-
-	//s5
-	dfaAllocExceptions(1);
-	dfaStoreException(0, chars['b']);
-	dfaStoreState(8);
-
-	//s6
-	dfaAllocExceptions(2);
-	dfaStoreException(7, chars['b']);
-	dfaStoreException(7, chars[' ']);
-	dfaStoreState(8);
-
-	//s7
-	dfaAllocExceptions(1);
-	dfaStoreException(0, chars['z']);
-	dfaStoreState(8);
-
-	//s8 - sink
-	dfaAllocExceptions(0);
-	dfaStoreState(8);
-
-	DFA* complex = dfaBuild("-----+---");
-	printf("dfaBeforeTrim:\n");
-	dfaPrintGraphviz(complex, var, indices_main);
-
-	char* testStringsBase[] = {"*,J#   ab", "(lb+   ab", "\"d@    ab", "* n-   ab", "* n    ab", "(  %   ab", "(      ab", "*l     ab", "*l )   ab",
-							   "*,J#*  ab", "(lb+ l ab", "\"d@   @ab", "* n-   ab", "* n    ab", "(  %   ab", "(      ab", "*l     ab", "*l )   ab",
-						       "*lJab"    , "(lbab"    , "\"d@ab"    , "* nab"    ,              "(  ab"    , "(  ab"    , "*l ab"                  };
-	int size = 25;
-	for (i = 0; i < size; i++){
-		printf("%s\n", testStringsBase[i]);
-		flush_output();
-		dfaString = dfa_construct_string(testStringsBase[i], var, indices_main);
-		assert(check_inclusion(dfaString, complex, var, indices_main));
-		dfaFree(dfaString);
-		assert(checkMembership(complex, testStringsBase[i], var, indices_main));
-	}
-	printf("\n");
-
-	char** testStrings1 = (char**) malloc(size * sizeof(char*));
-	for (j = 0; j < 3; j++ ){
-		printf("\n\nnumber of spaces is %d\n\n", (j+1));
-		for (i = 0; i < size; i++){
-			testStrings1[i] = (char*) malloc( ( strlen( testStringsBase[i] ) + 1) * sizeof(char));
-			strcpy(testStrings1[i], testStringsBase[i]);
-			for(k = 0; k <= j; k++)
-				testStrings1[i][k] = ' ';
-			printf("%s\n", testStrings1[i]);
-			flush_output();
-			dfaString = dfa_construct_string(testStrings1[i], var, indices_main);
-			assert(check_inclusion(dfaString, complex, var, indices_main));
-			dfaFree(dfaString);
-			assert(checkMembership(complex, testStrings1[i], var, indices_main));
-			free(testStrings1[i]);
-		}
-	}
-	free(testStrings1);
-
-
-	trimmed = dfaLeftTrim(complex, ' ', var, indices_main);
-	printf("dfaAfterTrim:\n");
-	dfaPrintGraphviz(trimmed, var, indices_main);
-
-	for (i = 0; i < size; i++){
-		printf("%s\n", testStringsBase[i]);
-		flush_output();
-		dfaString = dfa_construct_string(testStringsBase[i], var, indices_main);
-		assert(check_inclusion(dfaString, trimmed, var, indices_main));
-		dfaFree(dfa_construct_string(testStringsBase[i], var, indices_main));
-		assert(checkMembership(trimmed, testStringsBase[i], var, indices_main));
-	}
-	printf("\n");
-
-	testStrings1 = (char**) malloc(size * sizeof(char*));
-	for (j = 0; j < 3; j++ ){
-		printf("\n\nnumber of spaces is %d\n\n", (j+1));
-		for (i = 0; i < size; i++){
-			testStrings1[i] = (char*) malloc( ( strlen( testStringsBase[i] ) + 1) * sizeof(char));
-			strcpy(testStrings1[i], testStringsBase[i]);
-			for(k = 0; k <= j; k++)
-				testStrings1[i][k] = ' ';
-			printf("%s\t\t--\t\t", testStrings1[i]);
-			flush_output();
-			dfaString = dfa_construct_string(testStrings1[i], var, indices_main);
-			assert(!check_inclusion(dfaString, trimmed, var, indices_main));
-			dfaFree(dfaString);
-			assert(!checkMembership(trimmed, testStrings1[i], var, indices_main));
-			trimmeds = (char*) malloc( (strlen(testStrings1[i]) + 1) * sizeof(char) );
-			trimwhitespace(trimmeds, strlen(testStrings1[i])+1, testStrings1[i]);
-			printf("%s\n", trimmeds);
-			flush_output();
-			dfaString = dfa_construct_string(trimmeds, var, indices_main);
-			assert(check_inclusion(dfaString, trimmed, var, indices_main));
-			dfaFree(dfaString);
-			assert(checkMembership(trimmed, trimmeds, var, indices_main));
-			free(trimmeds);
-			free(testStrings1[i]);
-		}
-	}
-	free(testStrings1);
-
-	dfaFree(complex);
-	dfaFree(trimmed);
-
-	for (i = 0; i < 256; i++)
-		free(chars[i]);
-	free(chars);
-
-}
-
-
 DFA* dfaTrim(DFA* inputAuto, char c, int var, int* indices){
 	DFA *leftTrimmed, *leftThenRightTrimmed;
 	leftTrimmed = dfaLeftTrim(inputAuto, c, var, indices);
-	printf("\n\n\ndfa after left trim\n");
-	dfaPrintGraphvizAsciiRange(leftTrimmed, var, indices, 0);
+//	printf("\n\n\ndfa after left trim\n");
+//	dfaPrintGraphvizAsciiRange(leftTrimmed, var, indices, 0);
 	leftThenRightTrimmed = dfaRightTrim(leftTrimmed, c, var, indices);
 	dfaFree(leftTrimmed);
 	return leftThenRightTrimmed;
@@ -1715,7 +1063,7 @@ DFA* dfaTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices){
 	}
 
 	for (i = 0; i < num; i++){
-		leftThenRightTrimmed = dfaRightTrim(tmp, chars, var, indices);
+		leftThenRightTrimmed = dfaRightTrim(tmp, chars[i], var, indices);
 		dfaFree(tmp);
 		tmp = leftThenRightTrimmed;
 	}
@@ -1751,7 +1099,7 @@ DFA* dfaPreTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices)
 	}
 
 	for (i = 0; i < num; i++){
-		leftThenRightPreTrimmed = dfaPreRightTrim(tmp, chars, var, indices);
+		leftThenRightPreTrimmed = dfaPreRightTrim(tmp, chars[i], var, indices);
 		dfaFree(tmp);
 		tmp = leftThenRightPreTrimmed;
 	}
@@ -1760,35 +1108,61 @@ DFA* dfaPreTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices)
 }
 
 DFA* dfaAddSlashes(DFA* inputAuto, int var, int* indices){
-
-	DFA* searchAuto = dfa_construct_string("\\", var, indices);
-	char* replaceStr = "\\\\";
-	DFA* retMe1 = dfa_replace_extrabit(inputAuto, searchAuto, replaceStr, var, indices);
-	dfaFree(searchAuto); searchAuto = NULL;
-	// escape single quota '
-	// ' -> \'
-	searchAuto = dfa_construct_string("'", var, indices);
-	replaceStr = "\\'";
-	DFA* retMe2 = dfa_replace_extrabit(retMe1, searchAuto, replaceStr, var, indices);
-	dfaFree(searchAuto); searchAuto = NULL;
-	dfaFree(retMe1); retMe1 = NULL;
-
-	// escape double quota "
-	// " -> \"
-	searchAuto = dfa_construct_string("\"", var, indices);
-	replaceStr = "\\\"";
-	retMe1 = dfa_replace_extrabit(retMe2, searchAuto, replaceStr, var, indices);
-	dfaFree(searchAuto); searchAuto = NULL;
-	dfaFree(retMe2); retMe2 = NULL;
-
-	return retMe1;
+    if (isLengthFiniteDFS(inputAuto, var, indices)){
+        DFA* retMe1 = dfa_escape_single_finite_lang(inputAuto, var, indices, '\\', '\\');
+        // escape single quota '
+        // ' -> \'
+        DFA* retMe2 = dfa_escape_single_finite_lang(retMe1, var, indices, '\'', '\\');
+        dfaFree(retMe1);
+        // escape single quota '
+        // " -> \"
+        retMe1 = dfa_escape_single_finite_lang(retMe2, var, indices, '"', '\\');
+        dfaFree(retMe2);
+        return retMe1;
+    }
+    else
+    {
+        DFA* searchAuto = dfa_construct_string("\\", var, indices);
+        char* replaceStr = "\\\\";
+        DFA* retMe1 = dfa_replace_extrabit(inputAuto, searchAuto, replaceStr, var, indices);
+        dfaFree(searchAuto); searchAuto = NULL;
+        printf("passed first replace in addSlashes\n");
+        // escape single quota '
+        // ' -> \'
+        searchAuto = dfa_construct_string("'", var, indices);
+        replaceStr = "\\'";
+        DFA* retMe2 = dfa_replace_extrabit(retMe1, searchAuto, replaceStr, var, indices);
+        dfaFree(searchAuto); searchAuto = NULL;
+        dfaFree(retMe1); retMe1 = NULL;
+        printf("passed second replace  in addSlashes\n");
+        // escape double quota "
+        // " -> \"
+        searchAuto = dfa_construct_string("\"", var, indices);
+        replaceStr = "\\\"";
+        retMe1 = dfa_replace_extrabit(retMe2, searchAuto, replaceStr, var, indices);
+        dfaFree(searchAuto); searchAuto = NULL;
+        dfaFree(retMe2); retMe2 = NULL;
+        printf("passed third replace in addSlashes\n");
+        return retMe1;
+    }
 }
 
 DFA* dfaPreAddSlashes(DFA* inputAuto, int var, int* indices){
 
-	// Note that we need to escape the backslash in Java string. So to
-	// add one slash such as \ we have the write this in makeString
-	// as \\ to let Java escape the second slash.
+    if (isLengthFiniteDFS(inputAuto, var, indices)){
+        DFA* retMe1 = dfa_pre_escape_single_finite_lang(inputAuto, var, indices, '"', '\\');
+        // escape single quota '
+        // ' -> \'
+        DFA* retMe2 = dfa_pre_escape_single_finite_lang(retMe1, var, indices, '\'', '\\');
+        dfaFree(retMe1);
+        // escape single quota '
+        // " -> \"
+        retMe1 = dfa_pre_escape_single_finite_lang(retMe2, var, indices, '\\', '\\');
+        dfaFree(retMe2);
+        return retMe1;
+    }
+    else
+    {
 
 	// pre escape backslash \
 	// \ -> \\
@@ -1814,6 +1188,7 @@ DFA* dfaPreAddSlashes(DFA* inputAuto, int var, int* indices){
 		dfaFree(retMe2); retMe2 = NULL;
 
 		return retMe1;
+    }
 }
 
 void copyPrevBits(char* to, char* from, int limit){
@@ -1912,11 +1287,12 @@ void getLowerUpperCaseCharsPrePostHelper(char** result, char* transitions, int* 
 		for (i = 0; i < var; i++)
 			result[*indexInResult][i] = transitions[i];
 		// only difference between capital and small is bit number 2
-		if (!preImage)
+		if (!preImage){
 			if (lowerCase)
 				result[*indexInResult][2] = '1';
 			else
 				result[*indexInResult][2] = '0';
+        }
 		// extrabit should be 1 since we may already have same small letter originally with 0
 		result[*indexInResult][var] = '1';//extrabit
 		result[*indexInResult][var+1] = '\0';
@@ -1972,11 +1348,11 @@ DFA* dfaPrePostToLowerUpperCaseHelper(DFA* M, int var, int* oldIndices, boolean 
 		DFA *result;
 		paths state_paths, pp;
 		trace_descr tp;
-		int i, j, n;
+		int i, j, n, k;
 		char *exeps;
 		int *to_states;
 		int sink;
-		long max_exeps, k;
+		long max_exeps;
 		char *statuces;
 		int len;
 		int ns = M->ns;
@@ -2021,7 +1397,7 @@ DFA* dfaPrePostToLowerUpperCaseHelper(DFA* M, int var, int* oldIndices, boolean 
 					getLowerUpperCaseCharsPrePost(symbol, var, charachters, &size, lowerCase, preImage);
 					for (n = 0; n < size; n++)
 					{
-						printf("%s, ", charachters[n]);
+//						printf("%s, ", charachters[n]);
 						to_states[k] = pp->to;
 						for (j = 0; j < len; j++)
 							exeps[k * (len + 1) + j] = charachters[n][j];
@@ -2029,7 +1405,7 @@ DFA* dfaPrePostToLowerUpperCaseHelper(DFA* M, int var, int* oldIndices, boolean 
 						free(charachters[n]);
 						k++;
 					}
-					printf("\n");
+//					printf("\n");
 				}
 				pp = pp->next;
 			}
@@ -2085,208 +1461,487 @@ DFA* dfaPreToUpperCase(DFA* M, int var, int* indices){
 	return dfaPrePostToLowerUpperCaseHelper(M, var, indices, FALSE, TRUE);
 }
 
-void testToLowerUpperCaseHelper(boolean lowerCase){
-	int var = NUM_ASCII_TRACKS;
-	int* indices = (int *) allocateAscIIIndexWithExtraBit(NUM_ASCII_TRACKS);
+
+
+int getNumberOfNewStates(DFA *M, int var, int *indices, char *lambda, int sink){
+    int i, j, num = 0;
+    paths state_paths, pp;
+	trace_descr tp;
+    char *symbol = (char *) malloc((var + 1) * sizeof(char));
+
+    // for each original state
+	for (i = 0; i < M->ns; i++) {
+		state_paths = pp = make_paths(M->bddm, M->q[i]);
+		// for each transition out from current state (state i)
+		while (pp) {
+			if (pp->to != sink) {
+				for (j = 0; j < var; j++) {
+					//the following for loop can be avoided if the indices are in order
+					for (tp = pp->trace; tp && (tp->index != indices[j]); tp =
+                         tp->next)
+						;
+                    
+					if (tp) {
+						if (tp->value)
+							symbol[j] = '1';
+						else
+							symbol[j] = '0';
+					} else
+						symbol[j] = 'X';
+				}
+				symbol[var] = '\0';
+                
+                
+                // second copy to new accept state after removing lambda
+                if (isIncludeLambda(symbol, lambda, var)) {
+//                    printf("labmda founded from %d -> %d\n", i, pp->to);
+                    num++;
+                } 
+			}
+			pp = pp->next;
+		} //end while        
+		kill_paths(state_paths);
+	} // end for each original s
+    return num;
+}
+
+DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, char escapeChar){
+    DFA *result = NULL;
+	char* lambda = bintostr(c, var);
+  	char* escapeLambda = bintostr(escapeChar, var);
+   	char* lambdaExtraBit = (char *) malloc(sizeof(char) * (strlen(lambda) + 1));
+	struct int_list_type *states = NULL;
+    
+	int maxCount = 0;
+        
+	paths state_paths, pp;
+	trace_descr tp;
+    
+	int i, j, z, k;
+    
+	char *exeps;
+	int *to_states;
+	long max_exeps;
+	char *statuces;
+	int len = var + 1;
+	int sink, new_state_counter;
+    int *destinations;
+    
+	int numOfChars;
+	char** charachters;
+	int size;
+    
+	char *symbol;
+    
+    
+//	states = states_reach_accept_lambda(M, lambda, var, indices);
+//	if (states == NULL ){
+//		free(lambda);
+//		return dfaCopy(M);
+//	}
+    
+	symbol = (char *) malloc((var + 1) * sizeof(char));
+	maxCount = 0;
+    
+    int *indices = allocateArbitraryIndex(len);
+	max_exeps = 1 << len; //maybe exponential
+	sink = find_sink(M);
+	assert(sink > -1);
+    
+	numOfChars = 1 << var;
+	charachters = (char**) malloc(numOfChars * (sizeof(char*)));
+    
+    int num_new_states = getNumberOfNewStates(M, var, indices, lambda, sink);
+    new_state_counter = M->ns;
+    destinations = (int *) malloc(sizeof(int) * num_new_states);
+    
+	dfaSetup(M->ns + num_new_states, len, indices); //add one new accept state
+	exeps = (char *) malloc(max_exeps * (len + 1) * sizeof(char)); //plus 1 for \0 end of the string
+	to_states = (int *) malloc(max_exeps * sizeof(int));
+	statuces = (char *) malloc((M->ns + num_new_states + 2) * sizeof(char)); //plus 2, one for the new accept state and one for \0 end of the string
+    
+	// for each original state
+	for (i = 0; i < M->ns; i++) {
+		state_paths = pp = make_paths(M->bddm, M->q[i]);
+		k = 0;
+		// for each transition out from current state (state i)
+		while (pp) {
+			if (pp->to != sink) {
+				for (j = 0; j < var; j++) {
+					//the following for loop can be avoided if the indices are in order
+					for (tp = pp->trace; tp && (tp->index != indices[j]); tp =
+                         tp->next)
+						;
+                    
+					if (tp) {
+						if (tp->value)
+							symbol[j] = '1';
+						else
+							symbol[j] = '0';
+					} else
+						symbol[j] = 'X';
+				}
+				symbol[var] = '\0';
+
+
+					// second copy to new accept state after removing lambda
+					if (!isIncludeLambda(symbol, lambda, var)) {
+						// no lambda send as it is
+						to_states[k] = pp->to; // destination new accept state
+						for (j = 0; j < var; j++)
+							exeps[k * (len + 1) + j] = symbol[j];
+						exeps[k * (len + 1) + var] = '0';
+						exeps[k * (len + 1) + len] = '\0';
+						k++;
+					} else {
+                        // add new state and add edge from current to new state on lambda2 (escape char)
+                        destinations[new_state_counter - M->ns] = pp->to;
+                        to_states[k] = new_state_counter;
+                        for (j = 0; j < var; j++)
+                            exeps[k * (len + 1) + j] = escapeLambda[j];
+               			exeps[k * (len + 1) + var] = '1';
+                        exeps[k * (len + 1) + len] = '\0';
+                        k++;
+                        new_state_counter++;
+						// remove lambda then send copy to new accept state
+						removeTransitionOnChar(symbol, lambda, var, charachters,
+                                               &size);
+						for (z = 0; z < size; z++) {
+							// first copy of non-bamda char to original destination
+							to_states[k] = pp->to;
+							for (j = 0; j < var; j++)
+								exeps[k * (len + 1) + j] = charachters[z][j];
+                            exeps[k * (len + 1) + var] = '0';
+							exeps[k * (len + 1) + len] = '\0';
+							k++;
+							free(charachters[z]);
+						}
+					}
+			}
+			pp = pp->next;
+		} //end while
+        
+		dfaAllocExceptions(k);
+		for (k--; k >= 0; k--){
+			dfaStoreException(to_states[k], exeps + k * (len + 1));
+        }
+		dfaStoreState(sink);
+        if (M->f[i] == 1)
+            statuces[i] = '+';
+        else
+            statuces[i] = '-';
+        
+		kill_paths(state_paths);
+	} // end for each original state
+//    assert(new_state_counter == (num_new_states - 1));
+	// add new states
+    for (j = 0; j < var; j++)
+        lambdaExtraBit[j] = lambda[j];
+    lambdaExtraBit[var] = '0';
+    lambdaExtraBit[len] = '\0';
+    for (i = M->ns; i < new_state_counter; i++){
+        dfaAllocExceptions(1);
+        dfaStoreException(destinations[i - M->ns], lambdaExtraBit);
+        dfaStoreState(sink);
+        statuces[i] = '-';
+    }
+	statuces[new_state_counter] = '\0';
+	result = dfaBuild(statuces);
+    
+    DFA *tmp = dfaProject(result, var);
+    dfaFree(result);
+    result = dfaMinimize(tmp);
+
+    //	printf("dfaAfterRightTrimBeforeMinimize\n");
+    //	dfaPrintGraphviz(result, len, indices);
+	free(exeps);
+	//printf("FREE ToState\n");
+	free(to_states);
+	//printf("FREE STATUCES\n");
+	free(statuces);
+	free(charachters);
+    
+	free_ilt(states);
+	free(lambda);
+    free(escapeLambda);
+    free(destinations);
+    free(indices);
+    
+	return result;
+
+}
+
+
+int getNextStateOnLambda(DFA *M, int var, int *indices, char *lambda, int srcState, int sink){
+    int j, nextState = -1;
+    paths state_paths, pp;
+	trace_descr tp;
+    char *symbol = (char *) malloc((var + 1) * sizeof(char));
+    
+ 
+		state_paths = pp = make_paths(M->bddm, M->q[srcState]);
+		// for each transition out from current state srcState
+		while (pp) {
+			if (pp->to != sink) {
+				for (j = 0; j < var; j++) {
+					//the following for loop can be avoided if the indices are in order
+					for (tp = pp->trace; tp && (tp->index != indices[j]); tp =
+                         tp->next)
+						;
+                    
+					if (tp) {
+						if (tp->value)
+							symbol[j] = '1';
+						else
+							symbol[j] = '0';
+					} else
+						symbol[j] = 'X';
+				}
+				symbol[var] = '\0';
+                
+                
+                // second copy to new accept state after removing lambda
+                if (isIncludeLambda(symbol, lambda, var)) {
+                    nextState = pp->to;
+                    break;
+                }
+			}
+			pp = pp->next;
+		} //end while
+		kill_paths(state_paths);
+    return nextState;
+
+}
+
+DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, char escapeChar){
+    DFA *result = NULL;
+	char* escapeLambda = bintostr(escapeChar, var);
+  	char* lambda = bintostr(c, var);
+	int aux = 1;
+	struct int_list_type *states = NULL;
+    
+	int maxCount = 0;
+    
+	paths state_paths, pp;
+	trace_descr tp;
+    
+	int i, j, k;
+    
+	char *exeps;
+	int *to_states;
+	long max_exeps;
+	char *statuces;
+	int len = var + 1;
+	int sink;
+    
+	int numOfChars;
+	char** charachters;
+    
+	char *symbol;
+    
+  	int *indices = allocateArbitraryIndex(len); //indices is updated if you need to add auxiliary bits
+    
+    //	states = states_reach_accept_lambda(M, lambda, var, indices);
+    //	if (states == NULL ){
+    //		free(lambda);
+    //		return dfaCopy(M);
+    //	}
+    
+	symbol = (char *) malloc((var + 1) * sizeof(char));
+	maxCount = 0;
+    
+	if (maxCount > 0) { //Need auxiliary bits when there exist some outgoing edges
+		aux = 1;
+		len = var + aux; // extra aux bits
+		indices = allocateArbitraryIndex(len);
+	}
+    
+	max_exeps = 1 << len; //maybe exponential
+	sink = find_sink(M);
+	assert(sink > -1);
+    
+	numOfChars = 1 << var;
+	charachters = (char**) malloc(numOfChars * (sizeof(char*)));
+    
+    
+    
+	dfaSetup(M->ns, len, indices); //add one new accept state
+	exeps = (char *) malloc(max_exeps * (len + 1) * sizeof(char)); //plus 1 for \0 end of the string
+	to_states = (int *) malloc(max_exeps * sizeof(int));
+	statuces = (char *) malloc((M->ns + 2) * sizeof(char)); //plus 2, one for the new accept state and one for \0 end of the string
+    
+	// for each original state
+	for (i = 0; i < M->ns; i++) {
+		state_paths = pp = make_paths(M->bddm, M->q[i]);
+		k = 0;
+		// for each transition out from current state (state i)
+		while (pp) {
+			if (pp->to != sink) {
+				for (j = 0; j < var; j++) {
+					//the following for loop can be avoided if the indices are in order
+					for (tp = pp->trace; tp && (tp->index != indices[j]); tp =
+                         tp->next)
+						;
+                    
+					if (tp) {
+						if (tp->value)
+							symbol[j] = '1';
+						else
+							symbol[j] = '0';
+					} else
+						symbol[j] = 'X';
+				}
+				symbol[var] = '\0';
+                
+                to_states[k] = pp->to; // destination new accept state
+                for (j = 0; j < var; j++)
+                    exeps[k * (len + 1) + j] = symbol[j];
+                exeps[k * (len + 1) + var] = '0';
+                exeps[k * (len + 1) + len] = '\0';
+                k++;
+                // second copy to new accept state after removing lambda
+                if (isIncludeLambda(symbol, escapeLambda, var)) {
+                    int nextState = getNextStateOnLambda(M, var, oldindices, lambda, pp->to, sink);
+                    if (nextState != -1){
+                        to_states[k] = nextState; // destination new accept state
+                        for (j = 0; j < var; j++)
+                            exeps[k * (len + 1) + j] = lambda[j];
+                        exeps[k * (len + 1) + var] = '1';
+                        exeps[k * (len + 1) + len] = '\0';
+                        k++;
+                    }
+                }
+            }
+			pp = pp->next;
+		} //end while
+        
+		dfaAllocExceptions(k);
+		for (k--; k >= 0; k--)
+			dfaStoreException(to_states[k], exeps + k * (len + 1));
+		dfaStoreState(sink);
+        if (M->f[i] == 1)
+            statuces[i] = '+';
+        else
+            statuces[i] = '-';
+        
+		kill_paths(state_paths);
+	} // end for each original state
+    //    assert(new_state_counter == (num_new_states - 1));
+    statuces[M->ns] = '\0';
+	result = dfaBuild(statuces);
+    
+    DFA *tmp = dfaProject(result, var);
+    dfaFree(result);
+    result = dfaMinimize(tmp);
+    //	printf("dfaAfterRightTrimBeforeMinimize\n");
+    //	dfaPrintGraphviz(result, len, indices);
+	free(exeps);
+	//printf("FREE ToState\n");
+	free(to_states);
+	//printf("FREE STATUCES\n");
+	free(statuces);
+	free(charachters);
+    
+	free_ilt(states);
+	free(escapeLambda);
+    free(lambda);
+    free(indices);
+    
+	return result;
+    
+}
+
+struct transition_list_type *getTransitionRelation(DFA* M,
+                                                         int var, int* indices) {
+	paths state_paths, pp;
+	int sink = find_sink(M);
+	char *symbol = (char *) malloc((var+1)*sizeof(char));
+	struct transition_list_type *finallist = NULL;
 	int i;
-	char* symbol;
-	DFA* dfa, *dfa2, *result, *tmp;
-
-	printf("test dfaToLowerUpperCase();\n\n\n");
-
-//	// test empty language
-//	dfa = dfaASCIINonString(var, indices);
-//	result = dfaToLowerCase(dfa, var, indices);
-//	dfaPrintGraphviz(result, var, indices);
-//	assert(check_equivalence(dfa, result, var, indices));
-//	dfaFree(dfa); dfa = NULL;
-//	dfaFree(result); result = NULL;
-//
-//	printf("1st passed\n\n\n");
-//
-//	// test language with empty string only
-//	dfa = dfaASCIIOnlyNullString(var, indices);
-//	result = dfaToLowerCase(dfa, var, indices);
-//	dfaPrintGraphviz(dfa, var, indices);
-//	dfaPrintGraphviz(result, var, indices);
-//	assert(check_equivalence(dfa, result, var, indices));
-//	dfaFree(dfa); dfa = NULL;
-//	dfaFree(result); result = NULL;
-//
-//	printf("2nd passed\n\n\n");
-
-	// accepts a length of one charachter
-	dfaSetup(3, var, indices);
-	//s0
-	dfaAllocExceptions(0);
-	dfaStoreState(1);
-	//s1
-	dfaAllocExceptions(0);
-	dfaStoreState(2);
-	//s2
-	dfaAllocExceptions(0);
-	dfaStoreState(2);
-	dfa = dfaBuild("0+-");
-	dfaPrintGraphviz(dfa, var, indices);
-
-	// accepts a length of one charachter that is not capital letter
-	dfaSetup(3, var, indices);
-	//s0
-	dfaAllocExceptions(230);
-	int first, last;
-	if (lowerCase){
-		first = 65;last = 90;
+	for (i = 0; i < M->ns; i++) {
+		state_paths = pp = make_paths(M->bddm, M->q[i]);        
+		while (pp) {
+			if (pp->to != sink) {
+				finallist = transition_enqueue(finallist, i, pp->to);
+                
+			}
+			pp = pp->next;
+		} //end while
+        
+		kill_paths(state_paths);
 	}
-	else{
-		first = 97; last = 122;
-	}
-	for (i = 0; i < 256; i++){
-
-		if (i < first || i > last){
-			symbol = bintostr(i, var);
-			dfaStoreException(1, symbol);
-			free(symbol); symbol = NULL;
-		}
-	}
-	dfaStoreState(2);
-	//s1
-	dfaAllocExceptions(0);
-	dfaStoreState(2);
-	//s2
-	dfaAllocExceptions(0);
-	dfaStoreState(2);
-	tmp = dfaBuild("0+-");
-	dfaPrintGraphviz(tmp, var, indices);
-
-	result = lowerCase? dfaToLowerCase(dfa, var, indices): dfaToUpperCase(dfa, var, indices);;
-	dfaPrintGraphviz(result, var, indices);
-	assert(check_equivalence(tmp, result, var, indices));
-	dfaFree(dfa); dfa = NULL;
-	dfaFree(result); result = NULL;
-	dfaFree(tmp); tmp = NULL;
-	printf("3rd passed\n\n\n");
-
-
-
-	dfa = lowerCase? dfa_construct_string("?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`a", var, indices): dfa_construct_string("_`abcdefghijklmnopqrstuvwxyz{}|~A", var, indices);;
-	dfaPrintGraphviz(dfa, var, indices);
-	result = lowerCase? dfaToLowerCase(dfa, var, indices) : dfaToUpperCase(dfa, var, indices);
-	dfaFree(dfa); dfa = NULL;
-	dfa = lowerCase? dfa_construct_string("?@abcdefghijklmnopqrstuvwxyz[\\]^_`a", var, indices) : dfa_construct_string("_`ABCDEFGHIJKLMNOPQRSTUVWXYZ{}|~A", var, indices);
-	dfaPrintGraphviz(dfa, var, indices);
-	dfaPrintGraphviz(result, var, indices);
-	assert(check_equivalence(dfa, result, var, indices));
-	dfaFree(dfa); dfa = NULL;
-	dfaFree(result); result = NULL;
-	printf("4th passed\n\n\n");
-
-
-	char* alphaC = lowerCase? "?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`a": "_`abcdefghijklmnopqrstuvwxyz{}|~A";
-	char* alphaS = lowerCase? "?@abcdefghijklmnopqrstuvwxyz[\\]^_`a": "_`ABCDEFGHIJKLMNOPQRSTUVWXYZ{}|~A";
-	char** set = (char**) malloc((strlen(alphaC)) * sizeof(char*));
-	for(i = 0; i < strlen(alphaC); i++){
-		set[i] = (char*) malloc(2 * sizeof(char));
-		set[i][0] = alphaC[i]; set[i][1] = '\0';
-		printf("%s, ", set[i]);
-	}
-	printf("\n");
-	char** set2 = (char**) malloc((strlen(alphaS)) * sizeof(char*));
-	for(i = 0; i < strlen(alphaS); i++){
-		set2[i] = (char*) malloc(2 * sizeof(char));
-		set2[i][0] = alphaS[i]; set2[i][1] = '\0';
-		printf("%s, ", set2[i]);
-	}
-	printf("\n");
-	dfa = dfa_construct_set_of_strings(set, strlen(alphaC), var, indices);
-	dfaPrintGraphviz(dfa, var, indices);
-	dfa2 = dfa_construct_set_of_strings(set2, strlen(alphaS), var, indices);
-	dfaPrintGraphviz(dfa2, var, indices);
-	result = lowerCase? dfaToLowerCase(dfa, var, indices) : dfaToUpperCase(dfa, var, indices);
-	dfaPrintGraphviz(result, var, indices);
-	assert(check_equivalence(dfa2, result, var, indices));
-	dfaFree(dfa);dfa = NULL;
-	dfaFree(dfa2);dfa2 = NULL;
-	dfaFree(result);result = NULL;
-	for (i = 0; i < strlen(alphaC); i++)
-		free(set[i]);
-	free(set);set = NULL;
-	for (i = 0; i < strlen(alphaS); i++)
-		free(set2[i]);
-	free(set2); set2 = NULL;
-	printf("5th passed\n\n\n");
-
-
-	alphaC = lowerCase? "()*+01,-./?@ABDEFHIJKLMNOPQRSTUVWXYZ[\\]^_`a" : "()*+01,-./?@abdefhijklmnopqrstuvwxyz{}|~A";
-	alphaS = lowerCase? "()*+01,-./?@abdefhijklmnopqrstuvwxyz[\\]^_`a" : "()*+01,-./?@ABDEFHIJKLMNOPQRSTUVWXYZ{}|~A";
-	set = (char**) malloc((strlen(alphaC)) * sizeof(char*));
-	for(i = 0; i < strlen(alphaC); i++){
-		set[i] = (char*) malloc(2 * sizeof(char));
-		set[i][0] = alphaC[i]; set[i][1] = '\0';
-		printf("%s, ", set[i]);
-	}
-	printf("\n");
-	set2 = (char**) malloc((strlen(alphaS)) * sizeof(char*));
-	for(i = 0; i < strlen(alphaS); i++){
-		set2[i] = (char*) malloc(2 * sizeof(char));
-		set2[i][0] = alphaS[i]; set2[i][1] = '\0';
-		printf("%s, ", set2[i]);
-	}
-	printf("\n");
-	dfa = dfa_construct_set_of_strings(set, strlen(alphaC), var, indices);
-	dfaPrintGraphviz(dfa, var, indices);
-	dfa2 = dfa_construct_set_of_strings(set2, strlen(alphaS), var, indices);
-	dfaPrintGraphviz(dfa2, var, indices);
-	result = lowerCase? dfaToLowerCase(dfa, var, indices) : dfaToUpperCase(dfa, var, indices);
-	dfaPrintGraphviz(result, var, indices);
-	assert(check_equivalence(dfa2, result, var, indices));
-	dfaFree(dfa);dfa = NULL;
-	dfaFree(dfa2);dfa2 = NULL;
-	dfaFree(result);result = NULL;
-	for (i = 0; i < strlen(alphaC); i++)
-		free(set[i]);
-	free(set);set = NULL;
-	for (i = 0; i < strlen(alphaS); i++)
-		free(set2[i]);
-	free(set2); set2 = NULL;
-	printf("6th passed\n\n\n");
-
-
-	alphaC = lowerCase? " 0@P!1AQ" : " 0\"2`pbr";
-	alphaS = lowerCase? " 0@p!1aq" : " 0\"2`PBR";
-	set = (char**) malloc((strlen(alphaC)) * sizeof(char*));
-	for(i = 0; i < strlen(alphaC); i++){
-		set[i] = (char*) malloc(2 * sizeof(char));
-		set[i][0] = alphaC[i]; set[i][1] = '\0';
-		printf("%s, ", set[i]);
-	}
-	printf("\n");
-	set2 = (char**) malloc((strlen(alphaS)) * sizeof(char*));
-	for(i = 0; i < strlen(alphaS); i++){
-		set2[i] = (char*) malloc(2 * sizeof(char));
-		set2[i][0] = alphaS[i]; set2[i][1] = '\0';
-		printf("%s, ", set2[i]);
-	}
-	printf("\n");
-	dfa = dfa_construct_set_of_strings(set, strlen(alphaC), var, indices);
-	dfaPrintGraphviz(dfa, var, indices);
-	dfa2 = dfa_construct_set_of_strings(set2, strlen(alphaS), var, indices);
-	dfaPrintGraphviz(dfa2, var, indices);
-	result = lowerCase? dfaToLowerCase(dfa, var, indices) : dfaToUpperCase(dfa, var, indices);
-	dfaPrintGraphviz(result, var, indices);
-	assert(check_equivalence(dfa2, result, var, indices));
-	dfaFree(dfa);dfa = NULL;
-	dfaFree(dfa2);dfa2 = NULL;
-	dfaFree(result);result = NULL;
-	for (i = 0; i < strlen(alphaC); i++)
-		free(set[i]);
-	free(set);set = NULL;
-	for (i = 0; i < strlen(alphaS); i++)
-		free(set2[i]);
-	free(set2); set2 = NULL;
-	printf("7th passed\n\n\n");
+    
+    //	printf("list of states reachable on \\s:");
+    //	transition_print_ilt(finallist);
+    //	printf("\n");
+    
+	free(symbol);
+	return finallist;
 }
 
-void testToLowerUpperCase(){
-	testToLowerUpperCaseHelper(TRUE);
-	testToLowerUpperCaseHelper(FALSE);
+struct int_list_type * dfsHelper(struct transition_list_type *transition_relation, struct int_list_type *visited, int current_state, int *p_loopFound, int loopState){
+	visited = enqueue(visited, current_state);
+	struct transition_type *tmp2;
+	// for all transitions out from current state
+	for (tmp2 = transition_relation->head; tmp2 != NULL; tmp2 = tmp2->next) {
+		// if current transition is out from current state
+		if (current_state == tmp2->from) {
+            if (tmp2->to == loopState){
+                *p_loopFound = TRUE;
+                return visited;
+            }
+            //if destination is not visited before
+            if (!check_value(visited, tmp2->to)){
+                visited = dfsHelper(transition_relation, visited, tmp2->to, p_loopFound, loopState);
+                if (*p_loopFound)
+                    return visited;
+            }
+        }
+	}
+	return visited;
+    
 }
+
+/**
+ DFS to check if there is a loop in the automaton
+ */
+int dfs(DFA* M, int var, int* indices){
+    
+	struct transition_list_type *transition_relation = getTransitionRelation(M, var, indices);
+	if (transition_relation == NULL)
+		return FALSE;
+	struct int_list_type *visited=NULL;
+    int loopFound = FALSE;
+
+    struct transition_type *tmp;
+    //for each state check if it can reach itself. if so break and report a loop
+    for (tmp = transition_relation->head; tmp != NULL && !loopFound; tmp = tmp->next) {
+        dfsHelper(transition_relation, visited, tmp->from, &loopFound, tmp->from);
+        if (visited != NULL){
+            free_ilt(visited);
+            visited = NULL;
+        }
+	}
+
+
+
+	// free unneeded memory
+	transition_free_ilt(transition_relation);
+    //	printf("states that reach an accepting state on lambda: ");
+    //	print_ilt(finallist);
+    //	printf("\n");
+	return loopFound;
+}
+
+/**
+ checks if the length is finite using depth first seach for loops
+ */
+int isLengthFiniteDFS(DFA* M, int var, int *indices){
+    return (1 - dfs(M, var, indices));
+}
+
+
+
+
+
+
