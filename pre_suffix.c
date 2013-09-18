@@ -105,7 +105,9 @@ DFA *dfaSigmaC1toC2(int c1, int c2, int var, int* indices){
   //dfaPrintVerbose(result);
   free(statuces);
   if(c1==0) result->f[result->s]=1;
-  return dfaMinimize(result);
+    DFA *tmp = dfaMinimize(result);
+    dfaFree(result);
+  return tmp;
 
 }
 
@@ -191,6 +193,9 @@ int isOtherLambdaOut(DFA* M, char* lambda, int state, int var){
 	trace_descr tp;
 	int j, sink;
 
+    sink = find_sink(M);
+    assert(sink >= 0);
+    
 	symbol = (char *) malloc((var + 1) * sizeof(char));
 	state_paths = pp = make_paths(M->bddm, M->q[state]);
 
@@ -289,11 +294,11 @@ DFA *dfa_Suffix(DFA *M, int c1, int c2, int var, int *oldindices)
   paths state_paths, pp;
   trace_descr tp;
 
-  int i, j, z;
+  int i, j, z, k;
 
   char *exeps;
   int *to_states;
-  long max_exeps, k;
+  long max_exeps;
   char *statuces;
   int len=var;
   int sink;

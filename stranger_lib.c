@@ -34,6 +34,7 @@
 
 //for internal
 #include "stranger_lib_internal.h"
+#include "utility.h"
 
 //Turn on composite analysis for vul checking
 //#define _COMPOSITE_ANALYSIS
@@ -835,6 +836,51 @@ DFA *dfa_construct_string_closure_extrabit(char *reg, int var, int *indices) {
 	finals[len + 1] = '-';
 
 	return dfaBuild(finals);
+}
+
+
+/**
+ Constructs and automaton that accepts any string s where |s| is in the 
+ set "lengths".
+ Lengths must be a set of integers with at least one element.
+ If the set is ordered then set ordered to true to avoid ordering
+ */
+DFA *dfaSigmaLengthsSet(unsigned *lengths, const unsigned size, bool sorted, int var, int *indices){
+    int i, numOfStates;
+    char *statuces;
+    DFA *result=NULL;
+    
+    assert(lengths != NULL && size > 0);
+    
+    if (!sorted){
+        qsort(lengths, size, sizeof(unsigned), intcmpfunc);
+    }
+    unsigned upperBound = lengths[size - 1];//largest length
+    
+    numOfStates = upperBound + 2; //add one sink state
+    statuces=(char *)malloc((numOfStates+1)*sizeof(char));
+    dfaSetup(numOfStates,var,indices);
+    
+    for( i = 0; i <= upperBound; i++){
+        dfaAllocExceptions(0);
+        dfaStoreState(i+1);
+        if(findStateBS(lengths, i, 0, size - 1)) statuces[i]='+';
+        else statuces[i]='-';
+    }
+    //the sink state
+    dfaAllocExceptions(0);
+    dfaStoreState(i);
+    statuces[i]='-'; 
+    statuces[numOfStates]='\0';
+    
+    
+    result=dfaBuild(statuces);
+    //dfaPrintVerbose(result);
+    free(statuces);
+    DFA *tmp = dfaMinimize(result);
+    dfaFree(result);
+    return tmp;
+
 }
 
 // for INTERNAL use.
@@ -2711,9 +2757,20 @@ DFA *dfaQuestionMark(int var, int *indices){
  Verfication Function
 
  **********************************************/
+/**
+ if automaton is guaranteed to be minimized then this check
+ is very quick
+ */
+bool check_emptiness_minimized(DFA *M){
+    return (M->ns == 1 && M->f[M->s] == -1)? true : false;
+}
 
 int check_emptiness(M1, var, indices)
 DFA *M1;int var;int *indices; {
+    if (M1->ns == 1 && M1->f[M1->s] == -1)
+        return true;
+    
+    
 	char *satisfyingexample = NULL;
 	int i;
 	unsigned *uindices = (unsigned *) malloc((var+1) * sizeof(unsigned));
@@ -2803,7 +2860,7 @@ unsigned char strtobin(char* binChar, int var){
 char *isSingleton(DFA *M, int var, int* indices){
     if (check_emptiness(M, var, indices))
         return NULL;
-    if (checkEmptyString(M))
+    if (checkOnlyEmptyString(M))
         return "";
 	paths state_paths, pp;
 	trace_descr tp;
@@ -2878,11 +2935,19 @@ char *isSingleton(DFA *M, int var, int* indices){
 
 
 /*
- * check if dfa only accepts empty string
+ * check if dfa accepts empty string
  */
 int checkEmptyString(DFA *M){
   return ((M->f[M->s])==1) ? 1 : 0;
 }
+
+/*
+ * check if dfa accepts only empty string
+ */
+int checkOnlyEmptyString(DFA *M){
+    return (M->ns == 1 && M->f[M->s] == 1) ? 1 : 0;
+}
+
 
 int isTransitionIncludeChar(const char *str, char target, int var){
   int i;
@@ -4246,6 +4311,17 @@ DFA *dfa_restrict_by_unaryDFA(DFA *M, DFA* uL, int var, int *indices){
 
 
 
+/**
+ Given a set of finite lengths fl, returns an automaton M` where for all w element_of L(M)
+ if |w| is in fl then w is element_of L(M`)
+ If the list fl is sorted incrementally (from smallest to largest) set ordered to true.
+ */
+DFA *dfaRestrictByFiniteLengths(DFA *M, unsigned *lengths, const unsigned size, bool sorted, int var, int *indices){
+    DFA *lM = dfaSigmaLengthsSet(lengths, size, sorted, var, indices);
+    DFA *result = dfa_intersect(M, lM);
+    dfaFree(lM);
+    return result;
+}
 
 // Given an automaton M1, where M represents length of M1 this will return
 // a finite number of pairs (q, p) each representing (an infinite/finite) number of

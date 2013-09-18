@@ -164,6 +164,21 @@ extern "C" {
     
     DFA *dfa_construct_range(char a, char b, int var, int *indices);
     
+    /**
+     Constructs and automaton that accepts any string s where |s| is in the
+     set "lengths".
+     Lengths must be a set of integers with at least one element.
+     If the set is sorted incrementally (from smallest to largest)  then set "sorted" to true to avoid internal sorting
+     */
+    DFA *dfaSigmaLengthsSet(unsigned *lengths, const unsigned size, bool sorted, int var, int *indices);
+    
+    
+    /**
+     Given a set of finite lengths fl, returns an automaton M` where for all w element_of L(M)
+     if |w| is in fl then w is element_of L(M`)
+     If the list fl is sorted incrementally (from smallest to largest) set ordered to true.
+     */
+    DFA *dfaRestrictByFiniteLengths(DFA *M, unsigned *lengths, const unsigned size, bool sorted, int var, int *indices);
     //Construct DFA From another automaton
     // n_state is the number of states
     // accept_states is a string where if the char at position i is + then state i is accepting, if it is - it is not accepting
@@ -230,6 +245,12 @@ extern "C" {
     DFA *dfa_Suffix(DFA *M, int c1, int c2, int var, int *indices);
     
     //Checking function
+    /**
+     if automaton is guaranteed to be minimized then this check
+     is very quick
+     */
+    bool check_emptiness_minimized(DFA *M);
+    
     int check_emptiness(DFA *M1, int var, int *indices);
     
     int check_equivalence(DFA *M1, DFA *M2, int var, int *indices);
@@ -258,7 +279,7 @@ extern "C" {
      */
     int isLengthFinite(DFA* M, int var, int* indices);
     int isLengthFiniteDFS(DFA* M, int var, int *indices);
-    bool isLengthFiniteTarjan(DFA *M);
+    bool isLengthFiniteTarjan(DFA *M, int var, int *indices);
     
     typedef struct _DFAFiniteLengths {
         unsigned *lengths;
@@ -269,11 +290,16 @@ extern "C" {
      must call isLengthFiniteTarjan and make sure it returns true
      otherwise this method will not terminate.
      */
-    P_DFAFiniteLengths dfaGetLengthsFiniteLang(DFA *M);
+    P_DFAFiniteLengths dfaGetLengthsFiniteLang(DFA *M, int var, int *indices);
     /*
-     * checks if dfa represents empty string
+     * checks if dfa accepts empty string
      */
     int checkEmptyString(DFA *M);
+    
+    /*
+     * check if dfa accepts only empty string
+     */
+    int checkOnlyEmptyString(DFA *M);
     
     // generating an example i.e. an element of L(M)
     // Could return null in case solution is empty string or there

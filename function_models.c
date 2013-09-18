@@ -1074,8 +1074,8 @@ DFA* dfaTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices){
 DFA* dfaPreTrim(DFA* inputAuto, char c, int var, int* indices){
 	DFA *rightPreTrimmed, *rightThenLeftPreTrimmed;
 	rightPreTrimmed = dfaPreRightTrim(inputAuto, c, var, indices);
-	printf("\n\n\ndfa after pre right trim\n");
-	dfaPrintGraphvizAsciiRange(rightPreTrimmed, var, indices, 0);
+//	printf("\n\n\ndfa after pre right trim\n");
+//	dfaPrintGraphvizAsciiRange(rightPreTrimmed, var, indices, 0);
 	rightThenLeftPreTrimmed = dfaPreLeftTrim(rightPreTrimmed, c, var, indices);
 	dfaFree(rightPreTrimmed);
 	return rightThenLeftPreTrimmed;
@@ -1108,87 +1108,88 @@ DFA* dfaPreTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices)
 }
 
 DFA* dfaAddSlashes(DFA* inputAuto, int var, int* indices){
-    if (isLengthFiniteDFS(inputAuto, var, indices)){
+//    if (isLengthFiniteDFS(inputAuto, var, indices)){
         DFA* retMe1 = dfa_escape_single_finite_lang(inputAuto, var, indices, '\\', '\\');
         // escape single quota '
         // ' -> \'
-        DFA* retMe2 = dfa_escape_single_finite_lang(retMe1, var, indices, '\'', '\\');
-        dfaFree(retMe1);
-        // escape single quota '
-        // " -> \"
-        retMe1 = dfa_escape_single_finite_lang(retMe2, var, indices, '"', '\\');
-        dfaFree(retMe2);
+//        DFA* retMe2 = dfa_escape_single_finite_lang(retMe1, var, indices, '\'', '\\');
+//        dfaFree(retMe1);
+//        // escape single quota '
+//        // " -> \"
+//        retMe1 = dfa_escape_single_finite_lang(retMe2, var, indices, '"', '\\');
+//        dfaFree(retMe2);
         return retMe1;
-    }
-    else
-    {
-        DFA* searchAuto = dfa_construct_string("\\", var, indices);
-        char* replaceStr = "\\\\";
-        DFA* retMe1 = dfa_replace_extrabit(inputAuto, searchAuto, replaceStr, var, indices);
-        dfaFree(searchAuto); searchAuto = NULL;
-        printf("passed first replace in addSlashes\n");
-        // escape single quota '
-        // ' -> \'
-        searchAuto = dfa_construct_string("'", var, indices);
-        replaceStr = "\\'";
-        DFA* retMe2 = dfa_replace_extrabit(retMe1, searchAuto, replaceStr, var, indices);
-        dfaFree(searchAuto); searchAuto = NULL;
-        dfaFree(retMe1); retMe1 = NULL;
-        printf("passed second replace  in addSlashes\n");
-        // escape double quota "
-        // " -> \"
-        searchAuto = dfa_construct_string("\"", var, indices);
-        replaceStr = "\\\"";
-        retMe1 = dfa_replace_extrabit(retMe2, searchAuto, replaceStr, var, indices);
-        dfaFree(searchAuto); searchAuto = NULL;
-        dfaFree(retMe2); retMe2 = NULL;
-        printf("passed third replace in addSlashes\n");
-        return retMe1;
-    }
+//    }
+//    else
+//    {
+//        DFA* searchAuto = dfa_construct_string("\\", var, indices);
+//        char* replaceStr = "\\\\";
+//        DFA* retMe1 = dfa_replace_extrabit(inputAuto, searchAuto, replaceStr, var, indices);
+//        dfaFree(searchAuto); searchAuto = NULL;
+//        printf("passed first replace in addSlashes\n");
+//        // escape single quota '
+//        // ' -> \'
+//        searchAuto = dfa_construct_string("'", var, indices);
+//        replaceStr = "\\'";
+//        DFA* retMe2 = dfa_replace_extrabit(retMe1, searchAuto, replaceStr, var, indices);
+//        dfaFree(searchAuto); searchAuto = NULL;
+//        dfaFree(retMe1); retMe1 = NULL;
+//        printf("passed second replace  in addSlashes\n");
+//        // escape double quota "
+//        // " -> \"
+//        searchAuto = dfa_construct_string("\"", var, indices);
+//        replaceStr = "\\\"";
+//        retMe1 = dfa_replace_extrabit(retMe2, searchAuto, replaceStr, var, indices);
+//        dfaFree(searchAuto); searchAuto = NULL;
+//        dfaFree(retMe2); retMe2 = NULL;
+//        printf("passed third replace in addSlashes\n");
+//        return retMe1;
+//    }
 }
 
 DFA* dfaPreAddSlashes(DFA* inputAuto, int var, int* indices){
 
-    if (isLengthFiniteDFS(inputAuto, var, indices)){
-        DFA* retMe1 = dfa_pre_escape_single_finite_lang(inputAuto, var, indices, '"', '\\');
-        // escape single quota '
-        // ' -> \'
-        DFA* retMe2 = dfa_pre_escape_single_finite_lang(retMe1, var, indices, '\'', '\\');
-        dfaFree(retMe1);
+//    if (isLengthFiniteDFS(inputAuto, var, indices)){
+//        DFA* retMe1 = dfa_pre_escape_single_finite_lang(inputAuto, var, indices, '"', '\\');
+    DFA* retMe1 = dfa_pre_escape_single_finite_lang(inputAuto, var, indices, '\\', '\\');
+//        // escape single quota '
+//        // ' -> \'
+//        DFA* retMe2 = dfa_pre_escape_single_finite_lang(retMe1, var, indices, '\'', '\\');
+//        dfaFree(retMe1);
         // escape single quota '
         // " -> \"
-        retMe1 = dfa_pre_escape_single_finite_lang(retMe2, var, indices, '\\', '\\');
-        dfaFree(retMe2);
+//        retMe1 = dfa_pre_escape_single_finite_lang(retMe2, var, indices, '\\', '\\');
+//        dfaFree(retMe2);
         return retMe1;
-    }
-    else
-    {
-
-	// pre escape backslash \
-	// \ -> \\
-
-	DFA* searchAuto = dfa_construct_string("\\", var, indices);
-		char* replaceStr = "\\\\";
-		DFA* retMe1 = dfa_pre_replace_str(inputAuto, searchAuto, replaceStr, var, indices);
-		dfaFree(searchAuto); searchAuto = NULL;
-		// escape single quota '
-		// ' -> \'
-		searchAuto = dfa_construct_string("'", var, indices);
-		replaceStr = "\\'";
-		DFA* retMe2 = dfa_pre_replace_str(retMe1, searchAuto, replaceStr, var, indices);
-		dfaFree(searchAuto); searchAuto = NULL;
-		dfaFree(retMe1); retMe1 = NULL;
-
-		// escape double quota "
-		// " -> \"
-		searchAuto = dfa_construct_string("\"", var, indices);
-		replaceStr = "\\\"";
-		retMe1 = dfa_pre_replace_str(retMe2, searchAuto, replaceStr, var, indices);
-		dfaFree(searchAuto); searchAuto = NULL;
-		dfaFree(retMe2); retMe2 = NULL;
-
-		return retMe1;
-    }
+//    }
+//    else
+//    {
+//
+//	// pre escape backslash \
+//	// \ -> \\
+//
+//	DFA* searchAuto = dfa_construct_string("\\", var, indices);
+//		char* replaceStr = "\\\\";
+//		DFA* retMe1 = dfa_pre_replace_str(inputAuto, searchAuto, replaceStr, var, indices);
+//		dfaFree(searchAuto); searchAuto = NULL;
+//		// escape single quota '
+//		// ' -> \'
+//		searchAuto = dfa_construct_string("'", var, indices);
+//		replaceStr = "\\'";
+//		DFA* retMe2 = dfa_pre_replace_str(retMe1, searchAuto, replaceStr, var, indices);
+//		dfaFree(searchAuto); searchAuto = NULL;
+//		dfaFree(retMe1); retMe1 = NULL;
+//
+//		// escape double quota "
+//		// " -> \"
+//		searchAuto = dfa_construct_string("\"", var, indices);
+//		replaceStr = "\\\"";
+//		retMe1 = dfa_pre_replace_str(retMe2, searchAuto, replaceStr, var, indices);
+//		dfaFree(searchAuto); searchAuto = NULL;
+//		dfaFree(retMe2); retMe2 = NULL;
+//
+//		return retMe1;
+//    }
 }
 
 void copyPrevBits(char* to, char* from, int limit){
