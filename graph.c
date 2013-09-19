@@ -82,6 +82,7 @@ pTransitionRelation dfaGetTransitionRelation(DFA *M){
             }
             pp = pp->next;
         }
+        kill_paths(state_paths);
         /*******************  allocate node's adjacency list and fill it up *********************/
         if (p_transitionRelation->degrees[state] == 0) {
             p_transitionRelation->adjList[state]  = NULL;

@@ -676,6 +676,9 @@ DFA *dfaRightTrim(DFA *M, char c, int var, int *oldindices) {
 	free_ilt(states);
 	free(lambda);
 
+    free(symbol);
+    if (maxCount > 0) free(indices);
+    
 	return result;
 
 }
@@ -732,6 +735,7 @@ struct int_list_type *reachable_states_lambda_in_nout1(DFA *M, char *lambda, int
 			}
 			pp = pp->next;
 		}
+        kill_paths(state_paths);
 	}
 	if (finallist!=NULL){
 //		printf("list of states reachable on \\s:");
@@ -991,9 +995,12 @@ DFA *dfaLeftTrim(DFA *M, char c, int var, int *oldindices)
   free(statuces);
   free(charachters);
   free(lambda);
+    free(symbol);
 
-  if(maxCount>0) free(auxbit);
-
+    if(maxCount>0) {
+        free(indices);
+        free(auxbit);
+    }
   free_ilt(states);
 
   return result;
@@ -1503,6 +1510,9 @@ int getNumberOfNewStates(DFA *M, int var, int *indices, char *lambda, int sink){
 		} //end while        
 		kill_paths(state_paths);
 	} // end for each original s
+    
+    free(symbol);
+    
     return num;
 }
 
@@ -1667,6 +1677,7 @@ DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, cha
     free(escapeLambda);
     free(destinations);
     free(indices);
+    free(symbol);
     
 	return result;
 
@@ -1710,6 +1721,7 @@ int getNextStateOnLambda(DFA *M, int var, int *indices, char *lambda, int srcSta
 			pp = pp->next;
 		} //end while
 		kill_paths(state_paths);
+    free(symbol);
     return nextState;
 
 }
@@ -1741,12 +1753,6 @@ DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c,
 	char *symbol;
     
   	int *indices = allocateArbitraryIndex(len); //indices is updated if you need to add auxiliary bits
-    
-    //	states = states_reach_accept_lambda(M, lambda, var, indices);
-    //	if (states == NULL ){
-    //		free(lambda);
-    //		return dfaCopy(M);
-    //	}
     
 	symbol = (char *) malloc((var + 1) * sizeof(char));
 	maxCount = 0;
@@ -1847,6 +1853,7 @@ DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c,
 	free(escapeLambda);
     free(lambda);
     free(indices);
+    free(symbol);
     
 	return result;
     
