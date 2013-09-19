@@ -1662,7 +1662,7 @@ DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, cha
     DFA *tmp = dfaProject(result, var);
     dfaFree(result);
     result = dfaMinimize(tmp);
-
+    dfaFree(result);
     //	printf("dfaAfterRightTrimBeforeMinimize\n");
     //	dfaPrintGraphviz(result, len, indices);
 	free(exeps);
@@ -1672,12 +1672,13 @@ DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, cha
 	free(statuces);
 	free(charachters);
     
-	free_ilt(states);
+//	free_ilt(states);
 	free(lambda);
     free(escapeLambda);
     free(destinations);
     free(indices);
     free(symbol);
+    free(lambdaExtraBit);
     
 	return result;
 
@@ -1731,7 +1732,6 @@ DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c,
 	char* escapeLambda = bintostr(escapeChar, var);
   	char* lambda = bintostr(c, var);
 	int aux = 1;
-	struct int_list_type *states = NULL;
     
 	int maxCount = 0;
     
@@ -1756,12 +1756,6 @@ DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c,
     
 	symbol = (char *) malloc((var + 1) * sizeof(char));
 	maxCount = 0;
-    
-	if (maxCount > 0) { //Need auxiliary bits when there exist some outgoing edges
-		aux = 1;
-		len = var + aux; // extra aux bits
-		indices = allocateArbitraryIndex(len);
-	}
     
 	max_exeps = 1 << len; //maybe exponential
 	sink = find_sink(M);
@@ -1840,6 +1834,7 @@ DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c,
     DFA *tmp = dfaProject(result, var);
     dfaFree(result);
     result = dfaMinimize(tmp);
+    dfaFree(tmp);
     //	printf("dfaAfterRightTrimBeforeMinimize\n");
     //	dfaPrintGraphviz(result, len, indices);
 	free(exeps);
@@ -1849,7 +1844,6 @@ DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c,
 	free(statuces);
 	free(charachters);
     
-	free_ilt(states);
 	free(escapeLambda);
     free(lambda);
     free(indices);
