@@ -425,7 +425,7 @@ void set_bitvalue(char *bit, int length, int value) {
 			bit[i] = '1';
 		else
 			bit[i] = '0';
-	bit[length] = '\0';
+//	bit[length] = '\0';//causes buffer overrun
 	//	printf("\n added bits: %s\n", bit);
 }
 
