@@ -1662,7 +1662,7 @@ DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, cha
     DFA *tmp = dfaProject(result, var);
     dfaFree(result);
     result = dfaMinimize(tmp);
-    dfaFree(result);
+    dfaFree(tmp);
     //	printf("dfaAfterRightTrimBeforeMinimize\n");
     //	dfaPrintGraphviz(result, len, indices);
 	free(exeps);
