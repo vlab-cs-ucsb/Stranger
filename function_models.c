@@ -1510,7 +1510,7 @@ DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, cha
     DFA *result = NULL;
 	char* lambda = bintostr(c, var);
   	char* escapeLambda = bintostr(escapeChar, var);
-   	char* lambdaExtraBit = (char *) malloc(sizeof(char) * (strlen(lambda) + 1));
+   	char* lambdaExtraBit = (char *) malloc(sizeof(char) * (strlen(lambda) + 2));
 	struct int_list_type *states = NULL;
     
 	int maxCount = 0;
