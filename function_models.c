@@ -2805,6 +2805,44 @@ unsigned *getShiftArray2(PStatePairArrayList addedStates, int size, int shiftLen
     return shiftArray;
 }
 
+bool checkExtraBitNeeded(DFA *M, int var, int *indices, int state, char *lambda){
+    paths state_paths, pp;
+	trace_descr tp;
+    int sink = find_sink(M);
+	assert(sink > -1);
+	int j;
+    char *symbol = (char *) malloc((var + 1) * sizeof(char));
+    bool retMe = false;
+    state_paths = pp = make_paths(M->bddm, M->q[state]);
+    while (pp) {
+        if (pp->to != sink){
+            for (j = 0; j < var; j++){
+                //the following for loop can be avoided if the indices are in order
+                for (tp = pp->trace; tp && (tp->index != indices[j]); tp =
+                     tp->next)
+                    ;
+                
+                if (tp) {
+                    if (tp->value)
+                        symbol[j] = '1';
+                    else
+                        symbol[j] = '0';
+                } else
+                    symbol[j] = 'X';
+            }
+            symbol[var] = '\0';
+            if (isIncludeLambda(symbol, lambda, var)){
+                retMe = true;
+                break;
+            }
+        }
+        pp = pp->next;
+    }
+    kill_paths(state_paths);
+    free(symbol);
+    return retMe;
+}
+
 DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string){
     assert(string != NULL);
     //assert we do not do delete
@@ -2864,7 +2902,7 @@ DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replace
                         insertIntoStatePairSortedArrayList(replaceTransitions, i, pp->to, replacedChar);
                         numOfAddedStates += (strLength - 1);
                     }
-                    if (!extraBitNeeded && isIncludeLambda(symbol, firstCharBin, var))
+                    if (!extraBitNeeded && (isIncludeLambda(symbol, firstCharBin, var) || checkExtraBitNeeded(M, var, oldIndices, i, firstCharBin)))
                         extraBitNeeded = true;
                 }
             }
