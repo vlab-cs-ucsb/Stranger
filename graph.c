@@ -18,7 +18,13 @@
 /**********************************************************************/
 /*                  Getting transition relation                       */
 /**********************************************************************/
-
+/*
+ TODO: should return transition relation with the sink in it then add a function to
+ remove the sink.
+ This will break Tarjan length algorithm so it should be changed to take relation
+ after removing the sink.
+ it will also break pre_add_slashes which should not do any shifting
+ */
 pTransitionRelation dfaGetTransitionRelation(DFA *M){
     unsigned state, degree, nextState, i;
     state = degree = nextState = 0;
@@ -293,6 +299,29 @@ unsigned dfaGetMaxDegree(DFA *M, unsigned *p_maxState){
     return maxDegree;
 }
 
+void dfaShiftTransitionRelation(pTransitionRelation p_transitionRelation, int sink){
+    assert(p_transitionRelation != NULL);
+    int i, j;
+    p_transitionRelation->num_of_nodes++;
+    p_transitionRelation->adjList = mem_resize(p_transitionRelation->adjList, p_transitionRelation->num_of_nodes * sizeof(unsigned*));
+    for (i = p_transitionRelation->num_of_nodes - 1; i >= 0; i--){
+        if (i > sink) {
+            p_transitionRelation->adjList[i] = p_transitionRelation->adjList[i - 1];
+            p_transitionRelation->degrees[i] = p_transitionRelation->degrees[i - 1];
+        }
+        else if (i == sink){
+            p_transitionRelation->adjList[i] = NULL;
+            p_transitionRelation->degrees[i] = 0;
+        }
+        if (p_transitionRelation->degrees[i] == 0){
+            continue;
+        }
+        for (j = 0; j < p_transitionRelation->degrees[i]; j++){
+            p_transitionRelation->adjList[i][j] = (p_transitionRelation->adjList[i][j] < p_transitionRelation->sink) ? p_transitionRelation->adjList[i][j] : p_transitionRelation->adjList[i][j] + 1;
+        }
+    }
+}
+
 void dfaPrintTransitionRelation(pTransitionRelation p_transitionRelation){
     assert(p_transitionRelation != NULL);
     printf("**********************************\n");
@@ -310,6 +339,33 @@ void dfaPrintTransitionRelation(pTransitionRelation p_transitionRelation){
         }
         for (j = 0; j < p_transitionRelation->degrees[i]; j++){
             state = (p_transitionRelation->adjList[i][j] < p_transitionRelation->sink) ? p_transitionRelation->adjList[i][j] : p_transitionRelation->adjList[i][j] + 1;
+            if (j == 0)
+                printf("%u", state);
+            else
+                printf(", %u", state);
+        }
+        printf("\n");
+    }
+    printf("----------------------------------\n");
+}
+
+void dfaPrintTransitionRelationNoShift(pTransitionRelation p_transitionRelation){
+    assert(p_transitionRelation != NULL);
+    printf("**********************************\n");
+    printf("*     Transition Relation        *\n");
+    printf("**********************************\n");
+    printf("from | to\n");
+    printf("-----|----------------------------\n");
+    unsigned i, j,state;
+    for (i = 0; i < p_transitionRelation->num_of_nodes; i++){
+        state = i;
+        printf("%5u| ",state);
+        if (p_transitionRelation->degrees[i] == 0){
+            printf("\n");
+            continue;
+        }
+        for (j = 0; j < p_transitionRelation->degrees[i]; j++){
+            state = p_transitionRelation->adjList[i][j];
             if (j == 0)
                 printf("%u", state);
             else

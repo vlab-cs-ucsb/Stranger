@@ -16,7 +16,13 @@ extern "C" {
 
 #include "stranger.h"
 #include "mem.h"
-    
+  
+/*when building an NFA, do we favor
+ NFA with larger language but less
+ non-deterministic transitions to
+ sink*/
+#define MORE_WORDS_LESS_NDTRANS 0
+
 struct int_list_type *new_ilt();
 int find_sink(DFA *M);
 struct int_list_type *enqueue(struct int_list_type *list, int value);
@@ -42,6 +48,8 @@ DFA* mdfaMEqualLRc(DFA *M1, DFA *M2, char* str, int i_track, int j_track, int m,
 char *getSharp1(int k);
 char *getSharp0(int k);
 char *bintostr(unsigned long n, int k);
+char *bintostrWithExtraBit(unsigned long n, int k);
+unsigned char strtobin(char* binChar, int var);
 DFA *dfaSharpStringWithExtraBit(int var, int *indices);
 unsigned* allocateAscIIIndexUnsigned(int length);
 char *getSharp1(int k);
@@ -50,6 +58,8 @@ int check_init_reachable(DFA *M, int var, int *indices);
 struct int_list_type *reachable_states_lambda_in_nout(DFA *M, char *lambda, int var);
 int check_accept(DFA *M, struct int_list_type *states);
 int isIncludeLambda(char *str, char* lambda, int var);
+    void removeTransitionOnChars(char* monaCharacter, char **charachters, int numOfChars, int var, char** result, int* pSize);
+
 
 struct int_list_type **get_match_exclude_self(DFA *M, int var, int *indices);
 int get_maxcount(struct int_list_type **pairs, int size);

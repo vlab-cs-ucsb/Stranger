@@ -128,7 +128,10 @@ extern "C" {
     void dfaFreeTransitionRelation(pTransitionRelation p_transitionRelation);
     unsigned dfaGetDegree(DFA *M, unsigned state);
     unsigned dfaGetMaxDegree(DFA *M, unsigned *p_maxState);
+    void dfaShiftTransitionRelation(pTransitionRelation p_transitionRelation, int sink);
     void dfaPrintTransitionRelation(pTransitionRelation p_transitionRelation);
+    void dfaPrintTransitionRelationNoShift(pTransitionRelation p_transitionRelation);
+
     //*====================================================================
     /* Construct functions
      */
@@ -374,9 +377,9 @@ extern "C" {
      */
     DFA* dfaPreTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices);
     
-    DFA *dfa_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, char c2);
-    DFA *dfa_pre_escape_single_finite_lang(DFA *M, int var, int *oldindices, char c, char escapeChar);
-    
+    DFA *dfa_escape(DFA *M, int var, int *oldindices, char escapeChar, char *escapedChars, unsigned numOfEscapedChars);
+    DFA *dfa_pre_escape(DFA *M, int var, int *indices, char escapeChar, char *escapedChars, unsigned numOfEscapedChars);
+    DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string);
     
     //Utility function
     int getVar();
