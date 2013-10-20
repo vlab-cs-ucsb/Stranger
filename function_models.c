@@ -2785,7 +2785,7 @@ DFA *dfa_pre_escape(DFA *M, int var, int *indices, char escapeChar, char *escape
  */
 unsigned *getShiftArray2(PStatePairArrayList addedStates, int size, int shiftLen){
     assert(size >= 0);
-    assert(addedStates->sorted);
+    assert(addedStates->index == 0 || addedStates->sorted);
     
     unsigned *shiftArray = mem_alloc(size * sizeof(unsigned));
     mem_zero(shiftArray, size * sizeof(unsigned));
@@ -2878,6 +2878,7 @@ DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replace
     
     PStatePairArrayList replaceTransitions = createStatePairArrayList(32, 0);
     
+    /**************      PREPROCESSING PHASE     ******************/
     for (i = 0; i < M->ns; i++){
         state_paths = pp = make_paths(M->bddm, M->q[i]);
         while (pp) {
@@ -2908,12 +2909,17 @@ DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replace
             }
             pp = pp->next;
         }
+        kill_paths(state_paths);
     }
+    
+    /**************      BUILDING AUTOMATON PHASE     ******************/
     
     int len = extraBitNeeded? (var + 1): var;
     int *indices = allocateArbitraryIndex(len);
+
     
-    //Invariant: each pair in escapeTransitions is unique i.e. no two pairs share the same first state
+    
+    //Invariant: each pair in replacedTransitions is unique i.e. no two pairs share the same first state
     
     //if lenString is 1 i.e. replace a char with another char then shift array will be 0's
     unsigned *shiftArray = getShiftArray2(replaceTransitions, M->ns, (int)strLength-1);
@@ -3086,4 +3092,317 @@ DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replace
     //	dfaPrintGraphviz(result, len, indices);
 	return result;
 
+}
+
+
+int transitionIncludesChar(const char *str, char target, int var){
+    int i;
+    boolean result;
+    result = TRUE;
+    char* targetS = bintostr(target, var);
+    for(i=0; i<var; i++){
+        if(str[i]!='X' && str[i]!=targetS[i]){
+            result = FALSE;
+            break;
+        }
+    }
+    free(targetS);
+    return result;
+}
+
+
+/*
+ * if there is a path from state "state" on string "string" that does not lead
+ * to sink then return state at end of path otherwise return -1
+ */
+int stringAcceptedFromState(DFA* M, int state, char* string, int var, int* indices){
+   	assert(string != NULL);
+    
+	int length, i, j, currentState = state;
+	paths state_paths, pp;
+	trace_descr tp;
+	char* symbol;
+    bool found = true;
+
+    int sink = find_sink(M);
+    assert(sink > -1);
+    
+	length = (int) strlen(string);
+    
+	if (length == 0)
+		return state;
+    
+	symbol = (char *) malloc((var + 1) * sizeof(char));
+    
+    //we stop searching if:
+    //1- we finished the sting
+    //2- if we hit the sink state
+	for (i = 0; i < length && currentState != sink; i++){
+        found = false;
+		state_paths = pp = make_paths(M->bddm, M->q[currentState]);
+		while (pp) {
+            for (j = 0; j < var; j++) {
+                //the following for loop can be avoided if the indices are in order
+                for (tp = pp->trace; tp && (tp->index != indices[j]); tp
+                     = tp->next)
+                    ;
+                if (tp) {
+                    if (tp->value)
+                        symbol[j] = '1';
+                    else
+                        symbol[j] = '0';
+                } else
+                    symbol[j] = 'X';
+            }
+            symbol[var] = '\0';
+            if (transitionIncludesChar(symbol, string[i], var)){
+                currentState = pp->to;
+                //we found next state so stop searching from current state
+                found = true;
+                break;
+            }
+            pp = pp->next;
+		}
+		kill_paths(state_paths);
+        //we must find a transition on current char but it may lead to sink state
+        assert(found);
+    }
+  	
+    free(symbol);
+
+    //if we (1) finished the whole string and (2) did not hit the sink state then string is accepted from state
+    if (i == length && currentState != sink)
+        return currentState;
+    else
+        return -1;
+}
+
+/*
+ A state i can go to only one state j on an input string. So from state i there is a maximum of one
+ new transition out on replacedChar. This means we will need max 1 extra bit for nondeterminism.
+ */
+DFA *dfa_pre_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string){
+    assert(string != NULL);
+    //assert we do not do delete
+    assert(strlen(string) > 0);
+    //if replacing a char with itself just copy
+    if (strlen(string) == 1 && string[0] == replacedChar){
+        return dfaCopy(M);
+    }
+    DFA *result = NULL;
+	char* replacedCharBin = bintostr(replacedChar, var);
+    bool extraBitNeeded = false;
+    
+	paths state_paths, pp;
+	trace_descr tp;
+    
+	int i, j, k, z;
+    
+	char *exeps;
+	int *to_states;
+	long max_exeps;
+	char *statuces;
+	int sink;
+    
+	char *symbol = (char *) malloc((var + 1) * sizeof(char));
+    
+	max_exeps = 1 << var; //maybe exponential
+	sink = find_sink(M);
+	assert(sink > -1);
+    
+    PStatePairArrayList replaceTransitions = createStatePairArrayList(32, 0);
+    
+    for (i = 0; i < M->ns; i++){
+        int endState = stringAcceptedFromState(M, i, string, var, oldIndices);
+        if (endState != -1){
+            //string takes us from i to endState
+            if (!searchStatePairArrayListBS(replaceTransitions, i, endState, NULL)){
+                insertIntoStatePairSortedArrayList(replaceTransitions, i, endState, replacedChar);
+            }
+            if (!extraBitNeeded && checkExtraBitNeeded(M, var, oldIndices, i, replacedCharBin))
+                extraBitNeeded = true;
+        }
+    }
+    
+    int len = extraBitNeeded? (var + 1): var;
+    int *indices = allocateArbitraryIndex(len);
+    
+	dfaSetup(M->ns, len, indices); //add one new accept state
+	exeps = (char *) malloc(max_exeps * (len + 1) * sizeof(char)); //plus 1 for \0 end of the string
+	to_states = (int *) malloc(max_exeps * sizeof(int));
+	statuces = (char *) malloc((M->ns + 1) * sizeof(char)); //plus 2, one for the new accept state and one for \0 end of the string
+    
+#if MORE_WORDS_LESS_NDTRANS == 1
+    int numOfChars = 1 << var;
+	char **charachters = (char**) malloc(numOfChars * (sizeof(char*)));
+    int size = 0;
+#endif
+    
+    
+	// for each original state
+	for (i = 0; i < M->ns; i++) {
+		state_paths = pp = make_paths(M->bddm, M->q[i]);
+		k = 0;
+		// for each transition out from current state (state i)
+		while (pp) {
+			if (pp->to != sink) {
+				for (j = 0; j < var; j++) {
+					//the following for loop can be avoided if the indices are in order
+					for (tp = pp->trace; tp && (tp->index != oldIndices[j]); tp =
+                         tp->next)
+						;
+                    
+					if (tp) {
+						if (tp->value)
+							symbol[j] = '1';
+						else
+							symbol[j] = '0';
+					} else
+						symbol[j] = 'X';
+				}
+				symbol[var] = '\0';
+                
+                //Add original transitions
+#if MORE_WORDS_LESS_NDTRANS == 0
+                to_states[k] = pp->to;
+                for (j = 0; j < var; j++)
+                    exeps[k * (len + 1) + j] = symbol[j];
+                exeps[k * (len + 1) + j] = '0';//<-- only if len > var this will matter
+                exeps[k * (len + 1) + len] = '\0';
+                k++;
+#else
+                if (!isIncludeLambda(symbol, replacedCharBin, var)) { // Only Consider Non-lambda case
+                    to_states[k] = pp->to;
+                    for (j = 0; j < var; j++)
+                        exeps[k * (len + 1) + j] = symbol[j];
+                    exeps[k * (len + 1) + j] = 'X';//<-- only if len > var this will matter
+                    exeps[k * (len + 1) + len] = '\0';
+                    k++;
+                }
+                else {
+                    removeTransitionOnChar(symbol, replacedCharBin, var, charachters, &size);
+                    for (z = 0; z < size; z++)
+                    {
+                        //						printf("%s, ", charachters[i]);
+                        to_states[k] = pp->to;
+                        for (j = 0; j < var; j++)
+                            exeps[k * (len + 1) + j] = charachters[z][j];
+                        exeps[k * (len + 1) + j] = 'X';//<-- only if len > var this will matter
+                        exeps[k * (len + 1) + len] = '\0';
+                        free(charachters[z]);
+                        k++;
+                    }
+                    //					printf("\n");
+                    to_states[k] = pp->to;
+                    for (j = 0; j < var; j++)
+                        exeps[k * (len + 1) + j] = replacedCharBin[j];
+                    exeps[k * (len + 1) + j] = '0';//<-- only if len > var this will matter
+                    exeps[k * (len + 1) + len] = '\0';
+                    k++;
+                }
+#endif
+                
+                //check if this state "accepts" input string i.e. there is a path starting from this state
+                //on input string
+                //if so then add replacedChar transition to last state in that path
+                for (z = 0; z < replaceTransitions->index && replaceTransitions->list[z]->first <= i; z++){
+                    if (replaceTransitions->list[z]->first == i){
+                        to_states[k] = replaceTransitions->list[z]->second;
+                        for (j = 0; j < var; j++)
+                            exeps[k * (len + 1) + j] = replacedCharBin[j];
+                        exeps[k * (len + 1) + var] = '1';
+                        exeps[k * (len + 1) + len] = '\0';
+                        k++;
+                        //assert that there is only one path out of i on string i.e. that accepts string
+                        //we do this by checking if there is not next or the next is > i
+                        assert(((z+1) == replaceTransitions->index) || replaceTransitions->list[z+1]->first > i);
+                    }
+                }
+                    
+            }
+			pp = pp->next;
+		} //end while
+        
+		dfaAllocExceptions(k);
+		for (k--; k >= 0; k--){
+			dfaStoreException(to_states[k], exeps + k * (len + 1));
+        }
+		dfaStoreState(sink);
+        if (M->f[i] == 1)
+            statuces[i] = '+';
+        else
+            statuces[i] = '-';
+		kill_paths(state_paths);
+	} // end for each original state
+
+    statuces[M->ns] = '\0';
+	result = dfaBuild(statuces);
+    
+        
+#if MORE_WORDS_LESS_NDTRANS == 1
+    free(charachters);
+#endif
+    free(exeps);
+    //	//printf("FREE ToState\n");
+	free(to_states);
+    //	//printf("FREE STATUCES\n");
+	free(statuces);
+    free(replacedCharBin);
+    free(symbol);
+    free(indices);
+    freeStatePairArrayList(replaceTransitions);
+    //    dfaPrintVerbose(result);
+    DFA *tmp;
+    if(extraBitNeeded){
+        tmp = dfaProject(result, var);
+        dfaFree(result);
+        result = dfaMinimize(tmp);
+        dfaFree(tmp);
+    } else {
+        tmp = dfaMinimize(result);
+        dfaFree(result);
+        result = tmp;
+    }
+    
+    //    dfaPrintVerbose(tmp);
+    //	printf("dfaAfterRightTrimBeforeMinimize\n");
+    //	dfaPrintGraphviz(result, len, indices);
+	return result;
+    
+}
+
+DFA *dfaHtmlSpecialChars(DFA *inputAuto, int var, int *indices){
+    DFA *a1 = dfa_replace_char_with_string(inputAuto, var, indices, '<', "&lt;");
+
+    DFA *a2 = dfa_replace_char_with_string(a1, var, indices, '>', "&gt;");
+    dfaFree(a1);
+    
+    DFA *a3 = dfa_replace_char_with_string(a2, var, indices, '\'', "&apos;");
+    dfaFree(a2);
+
+    DFA *a4 = dfa_replace_char_with_string(a3, var, indices, '"', "&quot;");
+    dfaFree(a3);
+    
+    DFA *a5 = dfa_replace_char_with_string(a4, var, indices, '&', "&amp;");
+    dfaFree(a4);
+
+    return a5;
+}
+
+DFA *dfaPreHtmlSpecialChars(DFA *inputAuto, int var, int *indices){
+    DFA *a1 = dfa_pre_replace_char_with_string(inputAuto, var, indices, '&', "&amp;");
+    
+    DFA *a2 = dfa_pre_replace_char_with_string(a1, var, indices, '"', "&quot;");
+    dfaFree(a1);
+
+    DFA *a3 = dfa_pre_replace_char_with_string(a2, var, indices, '\'', "&apos;");
+    dfaFree(a2);
+
+    DFA *a4 = dfa_pre_replace_char_with_string(a3, var, indices, '>', "&gt;");
+    dfaFree(a3);
+    
+    DFA *a5 = dfa_pre_replace_char_with_string(a4, var, indices, '<', "&lt;");
+    dfaFree(a4);
+    
+    return a5;
 }
