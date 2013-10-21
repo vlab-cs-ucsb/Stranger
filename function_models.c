@@ -2179,6 +2179,9 @@ PStatePairArrayList getNewStatePairs(DFA *M, int var, int *indices, char **escap
 }
 
 DFA *dfa_escape(DFA *M, int var, int *oldindices, char escapeChar, char *escapedChars, unsigned numOfEscapedChars){
+    if (check_emptiness_minimized(M)){
+        return dfaCopy(M);
+    }
     DFA *result = NULL;
 	char* escapeCharBin = bintostr(escapeChar, var);
     
@@ -2560,7 +2563,7 @@ void getEscapeTransitions(DFA *M, int var, int *indices, char *escapeLambda, cha
  */
 unsigned *getShiftArray(PUIntArrayList deletedStates, int size){
     assert(size >= 0);
-    assert(deletedStates->sorted);
+    assert(deletedStates->index == 0 || deletedStates->sorted);
     
     unsigned *shiftArray = mem_alloc(size * sizeof(unsigned));
     mem_zero(shiftArray, size * sizeof(unsigned));
@@ -2604,6 +2607,9 @@ unsigned *getShiftArray(PUIntArrayList deletedStates, int size){
  states
  */
 DFA *dfa_pre_escape(DFA *M, int var, int *indices, char escapeChar, char *escapedChars, unsigned numOfEscapedChars){
+    if (check_emptiness_minimized(M)){
+        return dfaCopy(M);
+    }
     DFA *result = NULL;
 	char* escapeCharBin = bintostr(escapeChar, var);
         
@@ -2844,6 +2850,9 @@ bool checkExtraBitNeeded(DFA *M, int var, int *indices, int state, char *lambda)
 }
 
 DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string){
+    if (check_emptiness_minimized(M)){
+        return dfaCopy(M);
+    }
     assert(string != NULL);
     //assert we do not do delete
     assert(strlen(string) > 0);
@@ -3182,6 +3191,9 @@ int stringAcceptedFromState(DFA* M, int state, char* string, int var, int* indic
  new transition out on replacedChar. This means we will need max 1 extra bit for nondeterminism.
  */
 DFA *dfa_pre_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string){
+    if (check_emptiness_minimized(M)){
+        return dfaCopy(M);
+    }
     assert(string != NULL);
     //assert we do not do delete
     assert(strlen(string) > 0);
