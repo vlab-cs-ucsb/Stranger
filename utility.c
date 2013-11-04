@@ -14,6 +14,11 @@
 #include <limits.h>
 
 
+#ifndef SIZE_T_MAX
+	#define SIZE_T_MAX ULONG_MAX
+#endif
+
+
 
 int intcmpfunc (const void * a, const void * b)
 {

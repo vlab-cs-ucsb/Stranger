@@ -3296,7 +3296,7 @@ int dfaPrintBDD(DFA *a, char *filename, int var)
     
     /* build table of tuples (idx,lo,hi) */
     for (i = 0; i < a->ns; i++)
-        _export_(a->bddm, a->q[i], table);
+        export(a->bddm, a->q[i], table);
     
     /* renumber lo/hi pointers to new table ordering */
     for (i = 0; i < table->noelems; i++) {
