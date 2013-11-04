@@ -313,8 +313,9 @@ extern "C" {
     
     int dfaPrintBDD(DFA *a, char *filename, int var);
     void dfaPrintGraphvizAsciiRange(DFA *a, int no_free_vars, int *offsets, int printSink);
-    
-    
+    void dfaPrintGraphvizAsciiRangeFile(DFA *a, const char *filename, int no_free_vars, int *offsets, int printSink);
+    void dfaPrintGraphvizFile(DFA *a, const char *filename, int no_free_vars, unsigned *offsets);
+
     // Outputs M` that represents the length of automaton M
     //Output M, so that L(M)={|w|| w \in L(M1)}
     //Need to use extra bit to model NFA to DFA

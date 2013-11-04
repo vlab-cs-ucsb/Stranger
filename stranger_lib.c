@@ -3390,7 +3390,7 @@ void dfaPrintGraphvizAsciiRange(DFA *a, int no_free_vars, int *offsets, int prin
 	printf("digraph MONA_DFA {\n"
 			" rankdir = LR;\n"
 			" center = true;\n"
-			" size = \"7.5,10.5\";\n"
+			" size = \"700.5,1000.5\";\n"
 			" edge [fontname = Courier];\n"
 			" node [height = .5, width = .5];\n"
 			" node [shape = doublecircle];");
@@ -3528,7 +3528,292 @@ void dfaPrintGraphvizAsciiRange(DFA *a, int no_free_vars, int *offsets, int prin
 	printf("}\n");
 }
 
+/**
+ * printSink: 0 do not print sink nor its incomming/outgoing edges at all,
+ *         1 print sink+edges but no edge labels,
+ *         2 print everything
+ * possible memory leak when printsink == 0 needs correction
+ */
+void dfaPrintGraphvizAsciiRangeFile(DFA *a, const char *filename, int no_free_vars, int *offsets, int printSink)
+{
+	paths state_paths, pp;
+	trace_descr tp;
+	int i, j, k, l, size, maxexp, sink;
+	pCharPair *buffer;//array of charpairs references
+	char *character;
+	pCharPair **toTrans;//array for all states, each entry is an array of charpair references
+	int *toTransIndecies;
+	char** ranges;
+    
+    
+    FILE *file;
+    if (filename) {
+        if ((file = fopen(filename, "w")) == 0)
+            return;
+    }
+    else {
+        file = stdout;
+    }
+    
+	sink = find_sink(a);
+    //	assert( sink > -1);//with reserved chars, sink is always reject even when negated
+	assert(no_free_vars == 8);
+    
+	fprintf(file, "digraph MONA_DFA {\n"
+           " rankdir = LR;\n"
+           " center = true;\n"
+           " size = \"700.5,1000.5\";\n"
+           " edge [fontname = Courier];\n"
+           " node [height = .5, width = .5];\n"
+           " node [shape = doublecircle];");
+	for (i = 0; i < a->ns; i++)
+		if (a->f[i] == 1)
+			fprintf(file, " %d;", i);
+	fprintf(file, "\n node [shape = circle];");
+	for (i = 0; i < a->ns; i++)
+		if (a->f[i] == -1)
+			if (i != sink || printSink != 0)
+				fprintf(file, " %d;", i);
+	fprintf(file, "\n node [shape = box];");
+	for (i = 0; i < a->ns; i++)
+		if (a->f[i] == 0)
+			fprintf(file, " %d;", i);
+	fprintf(file, "\n init [shape = plaintext, label = \"\"];\n"
+           " init -> %d;\n", a->s);
+    
+	maxexp = 1<<no_free_vars;
+	buffer = (pCharPair*) malloc(sizeof(pCharPair) * maxexp);//max no of chars from Si to Sj = 2^no_free_vars
+	character = (char*) malloc((no_free_vars+1) * sizeof(char));
+	toTrans = (pCharPair**) malloc(sizeof(pCharPair*) * a->ns);//need this to gather all edges out to state Sj from Si
+	for (i = 0; i < a->ns; i++){
+		toTrans[i] = (pCharPair*) malloc(maxexp * sizeof(pCharPair));
+	}
+	toTransIndecies = (int*) malloc(a->ns * sizeof(int));//for a state Si, how many edges out to each state Sj
+    
+    
+	for (i = 0; i < a->ns; i++) {
+		//get transitions out from state i
+		state_paths = pp = make_paths(a->bddm, a->q[i]);
+        
+		//init buffer
+		for (j = 0; j < a->ns; j++) {
+			toTransIndecies[j] = 0;
+		}
+		for (j = 0; j < maxexp; j++){
+			for (k = 0; k < a->ns; k++)
+				toTrans[k][j] = 0;
+			buffer[j] = 0;
+		}
+        
+		//gather transitions out from state i
+		//for each transition pp out from state i
+		while (pp) {
+			if (pp->to == sink && printSink == 0){
+				pp = pp->next;
+				continue;
+			}
+			//get mona character on transition pp
+			for (j = 0; j < no_free_vars; j++) {
+				for (tp = pp->trace; tp && (tp->index != offsets[j]);
+                     tp = tp->next)
+					;
+                
+				if (tp) {
+					if (tp->value)
+						character[j] = '1';
+					else
+						character[j] = '0';
+				} else
+					character[j] = 'X';
+			}
+			character[j] = '\0';
+			if (no_free_vars == 8){
+				//break mona character into ranges of ascii chars (example: "0XXX000X" -> [\s-!], [0-1], [@-A], [P-Q])
+				size = 0;
+				getTransitionChars(character, no_free_vars, buffer, &size);
+				//get current index
+				k = toTransIndecies[pp->to];
+				//print ranges
+				for (l = 0; l < size; l++) {
+					toTrans[pp->to][k++] = buffer[l];
+					buffer[l] = 0;//do not free just detach
+				}
+				toTransIndecies[pp->to] = k;
+			} else {
+                //				k = toTransIndecies[pp->to];
+                //				toTrans[pp->to][k] = (char*) malloc(sizeof(char) * (strlen(character) + 1));
+                //				strcpy(toTrans[pp->to][k], character);
+                //				toTransIndecies[pp->to] = k + 1;
+			}
+			pp = pp->next;
+		}
+        
+		//print transitions out of state i
+		for (j = 0; j < a->ns; j++) {
+			size = toTransIndecies[j];
+			if (size == 0 || (sink == j && printSink == 0))
+				continue;
+			ranges = mergeCharRanges(toTrans[j], &size);
+			//print edge from i to j
+			fprintf(file, " %d -> %d [label=\"", i, j);
+			boolean printLabel = (j != sink || printSink == 2);
+			l = 0;//to help breaking into new line
+			//for each trans k on char/range from i to j
+			for (k = 0; k < size; k++) {
+				//print char/range
+				if (printLabel) fprintf(file, " %s", ranges[k]);
+				l += strlen(ranges[k]);
+				if (l > 18){
+					if (printLabel) fprintf(file, "\\n");
+					l = 0;
+				}
+				else if (k < (size - 1))
+					if (printLabel) fputc(',', file);
+				free(ranges[k]);
+			}//for
+			fprintf(file, "\"];\n");
+			if (size > 0)
+				free(ranges);
+		}
+		//for each state free charRange
+		//merge with loop above for better performance
+		for (j = 0; j < a->ns; j++){
+			if (j == sink && printSink == 0)
+				continue;
+			size = toTransIndecies[j];
+			for (k = 0; k < size; k++)
+				free(toTrans[j][k]);
+		}
+        
+        
+		kill_paths(state_paths);
+	}//end for each state
+    
+	free(character);
+	free(buffer);
+	for (i = 0; i < a->ns; i++){
+		free(toTrans[i]);
+	}
+	free(toTrans);
+	free(toTransIndecies);
+    
+	fprintf(file, "}\n");
+    
+    if (filename)
+        fclose(file);
+}
 
+
+
+void dfaPrintGraphvizFile(DFA *a, const char *filename, int no_free_vars, unsigned *offsets)
+{
+    paths state_paths, pp;
+    trace_descr tp;
+    int i, j, k, l;
+    char **buffer;
+    int *used, *allocated;
+    
+    FILE *file;
+    if (filename) {
+        if ((file = fopen(filename, "w")) == 0)
+            return;
+    }
+    else {
+        file = stdout;
+    }
+    
+    fprintf(file, "digraph MONA_DFA {\n"
+           " rankdir = LR;\n"
+           " center = true;\n"
+           " size = \"700.5,1000.5\";\n"
+           " edge [fontname = Courier];\n"
+           " node [height = .5, width = .5];\n"
+           " node [shape = doublecircle];");
+    for (i = 0; i < a->ns; i++)
+        if (a->f[i] == 1)
+            fprintf(file, " %d;", i);
+    fprintf(file, "\n node [shape = circle];");
+    for (i = 0; i < a->ns; i++)
+        if (a->f[i] == -1)
+            fprintf(file, " %d;", i);
+    fprintf(file, "\n node [shape = box];");
+    for (i = 0; i < a->ns; i++)
+        if (a->f[i] == 0)
+            fprintf(file, " %d;", i);
+    fprintf(file, "\n init [shape = plaintext, label = \"\"];\n"
+           " init -> %d;\n", a->s);
+    
+    buffer = (char **) mem_alloc(sizeof(char *) * a->ns);
+    used = (int *) mem_alloc(sizeof(int) * a->ns);
+    allocated = (int *) mem_alloc(sizeof(int) * a->ns);
+    
+    for (i = 0; i < a->ns; i++) {
+        state_paths = pp = make_paths(a->bddm, a->q[i]);
+        
+        for (j = 0; j < a->ns; j++) {
+            buffer[j] = 0;
+            used[j] = allocated[j] = 0;
+        }
+        
+        while (pp) {
+            if (used[pp->to] >= allocated[pp->to]) {
+                allocated[pp->to] = allocated[pp->to]*2+2;
+                buffer[pp->to] =
+                (char *) mem_resize(buffer[pp->to], sizeof(char) *
+                                    allocated[pp->to] * no_free_vars);
+            }
+            
+            for (j = 0; j < no_free_vars; j++) {
+                char c;
+                for (tp = pp->trace; tp && (tp->index != offsets[j]); tp = tp->next);
+                
+                if (tp) {
+                    if (tp->value)
+                        c = '1';
+                    else
+                        c = '0';
+                }
+                else
+                    c = 'X';
+                
+                buffer[pp->to][no_free_vars*used[pp->to] + j] = c;
+            }
+            used[pp->to]++;
+            pp = pp->next;
+        }
+        
+        for (j = 0; j < a->ns; j++)
+            if (buffer[j]) {
+                fprintf(file, " %d -> %d [label=\"", i, j);
+                for (k = 0; k < no_free_vars; k++) {
+                    for (l = 0; l < used[j]; l++) {
+                        fputc(buffer[j][no_free_vars*l+k], file);
+                        if (l+1 < used[j]) {
+                            if (k+1 == no_free_vars)
+                                fputc(',', file);
+                            else
+                                fputc(' ', file);
+                        }
+                    }
+                    if (k+1 < no_free_vars)
+                        fprintf(file, "\\n");
+                }
+                fprintf(file, "\"];\n");
+                mem_free(buffer[j]);
+            }
+        
+        kill_paths(state_paths);
+    }
+    
+    mem_free(allocated);
+    mem_free(used);
+    mem_free(buffer);
+    
+    fprintf(file, "}\n");
+    
+    if (filename)
+        fclose(file);
+}
 
 
 //return the max pairs[i]->count

@@ -185,6 +185,8 @@ pTransitionRelation get_reverse_transition_relation_helper(DFA *M, pTransitionRe
     p_reverseTransitionRelation->num_of_nodes = num_of_nodes;
     p_reverseTransitionRelation->adjList = reverseAdjList;
     p_reverseTransitionRelation->degrees = reverseDegrees;
+    p_reverseTransitionRelation->acceptsSize = 0;
+    p_reverseTransitionRelation->accepts = NULL;
 
     if (M != NULL)
         dfaFreeTransitionRelation(p_transitionRelation);
@@ -227,7 +229,8 @@ void dfaFreeTransitionRelation(pTransitionRelation p_transitionRelation){
     }
     free(p_transitionRelation->adjList);
     free(p_transitionRelation->degrees);
-    free(p_transitionRelation->accepts);
+    if (p_transitionRelation->acceptsSize > 0)
+        free(p_transitionRelation->accepts);
     free(p_transitionRelation);
 }
 
