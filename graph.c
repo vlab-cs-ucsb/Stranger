@@ -223,10 +223,12 @@ bool dfaIsPrevState(pTransitionRelation p_transitionRelation, unsigned currentSt
 
 void dfaFreeTransitionRelation(pTransitionRelation p_transitionRelation){
     int state;
+
     for (state = 0; state < p_transitionRelation->num_of_nodes; state++){
-        if (p_transitionRelation->degrees[state] > 0)
+    	if (p_transitionRelation->degrees[state] > 0)
             free(p_transitionRelation->adjList[state]);
     }
+
     free(p_transitionRelation->adjList);
     free(p_transitionRelation->degrees);
     if (p_transitionRelation->acceptsSize > 0)
@@ -305,8 +307,11 @@ unsigned dfaGetMaxDegree(DFA *M, unsigned *p_maxState){
 void dfaShiftTransitionRelation(pTransitionRelation p_transitionRelation, int sink){
     assert(p_transitionRelation != NULL);
     int i, j;
+
     p_transitionRelation->num_of_nodes++;
+    p_transitionRelation->degrees = mem_resize(p_transitionRelation->degrees, p_transitionRelation->num_of_nodes * sizeof(t_st_word));
     p_transitionRelation->adjList = mem_resize(p_transitionRelation->adjList, p_transitionRelation->num_of_nodes * sizeof(unsigned*));
+
     for (i = p_transitionRelation->num_of_nodes - 1; i >= 0; i--){
         if (i > sink) {
             p_transitionRelation->adjList[i] = p_transitionRelation->adjList[i - 1];
@@ -323,6 +328,7 @@ void dfaShiftTransitionRelation(pTransitionRelation p_transitionRelation, int si
             p_transitionRelation->adjList[i][j] = (p_transitionRelation->adjList[i][j] < p_transitionRelation->sink) ? p_transitionRelation->adjList[i][j] : p_transitionRelation->adjList[i][j] + 1;
         }
     }
+
 }
 
 void dfaPrintTransitionRelation(pTransitionRelation p_transitionRelation){

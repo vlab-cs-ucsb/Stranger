@@ -1774,6 +1774,19 @@ DFA* dfaPreTrimSet(DFA* inputAuto, char chars[], int num, int var, int* indices)
 	return leftThenRightPreTrimmed;
 }
 
+DFA* dfaMysqlEscapeString(DFA* inputAuto, int var, int* indices) {
+    char escapedChars[] = {'\'', '"', (char)10, (char)13, (char)26};
+    DFA* retMe1 = dfa_escape(inputAuto, var, indices, '\\', escapedChars, 5);
+    return retMe1;
+}
+
+
+DFA* dfaPreMysqlEscapeString(DFA* inputAuto, int var, int* indices) {
+    char escapedChars[] = {'\\', '\'', '"', (char)10, (char)13, (char)26};
+    DFA* retMe1 = dfa_pre_escape(inputAuto, var, indices, '\\', escapedChars, 6);
+	return retMe1;
+}
+
 DFA* dfaAddSlashes(DFA* inputAuto, int var, int* indices){
         char escapedChars[] = {'\'', '"'};
 //    if (isLengthFiniteDFS(inputAuto, var, indices)){
@@ -2284,11 +2297,11 @@ DFA *dfa_escape(DFA *M, int var, int *oldindices, char escapeChar, char *escaped
         
         if (escapeState){
             to_states[k] = (int) numOfEscapeStates + M->ns;
-            printf("%d -> %d\n", i, to_states[k]);
+//            printf("%d -> %d\n", i, to_states[k]);
             for (j = 0; j < var; j++)
                 exeps[k * (len + 1) + j] = escapeCharBin[j];
             exeps[k * (len + 1) + len] = '\0';
-            printf("%s\n",exeps + (k * (len + 1)));
+//            printf("%s\n",exeps + (k * (len + 1)));
             k++;
             numOfEscapeStates++;
         }
@@ -2323,12 +2336,12 @@ DFA *dfa_escape(DFA *M, int var, int *oldindices, char escapeChar, char *escaped
             m = 0;
             while (m < numOfEscapedChars && statePair->escapedChars[m] != (char) 255) {
                 to_states[k] = statePair->second;
-                printf("%d -> %d\n", (i + M->ns), to_states[k]);
+//                printf("%d -> %d\n", (i + M->ns), to_states[k]);
                 char * escapedCharBin = bintostr(statePair->escapedChars[m], var);
                 for (n = 0; n < var; n++)
                     exeps[k * (len + 1) + n] = escapedCharBin[n];
                 exeps[k * (len + 1) + len] = '\0';
-                printf("%s\n",exeps + (k * (len + 1)));
+//                printf("%s\n",exeps + (k * (len + 1)));
                 k++;m++;
             }
             z++;
@@ -2480,7 +2493,7 @@ bool getNextStateOnLambda(DFA *M, int var, int *indices, char *lambda, unsigned 
 
 void getEscapeTransitionsHelper(DFA *M, int var, int *indices, PStatePairArrayList escapeTransitions, PUIntArrayList escapedStates, bool *visited, pTransitionRelation pTransRel, pTransitionRelation pRevTransRel, unsigned currentState, char *escapeCharBin, char escapeChar, unsigned numOfEscapees){
     unsigned nextState;
-    printf("current State = %u, degree of current State = %u\n", currentState, pTransRel->degrees[currentState]);
+//    printf("current State = %u, degree of current State = %u\n", currentState, pTransRel->degrees[currentState]);
     
     visited[currentState] = true;
     
@@ -2493,18 +2506,18 @@ void getEscapeTransitionsHelper(DFA *M, int var, int *indices, PStatePairArrayLi
         unsigned i;
         for (i = 0; i < pRevTransRel->degrees[currentState] && !escaped; i++){
             unsigned from = fromStates[i];
-            printf("searching for %u->%u\n", from, currentState);
+//            printf("searching for %u->%u\n", from, currentState);
             if (searchStatePairArrayListBS(escapeTransitions, from, currentState, &index)){
-                printf("%u->%u escapes %u->%u\n",from, currentState, currentState, nextState);
+//                printf("%u->%u escapes %u->%u\n",from, currentState, currentState, nextState);
                 escaped = true;
                 assert(searchUIntArrayListBS(escapedStates, currentState, NULL));
             }
         }
         if (!escaped){
             insertIntoStatePairSortedArrayList(escapeTransitions, currentState, nextState, escapeChar);
-            printf("new escape trans: %u->%u", currentState, nextState);
+//            printf("new escape trans: %u->%u", currentState, nextState);
             if (!searchUIntArrayListBS(escapedStates, nextState, NULL)){
-                printf("   ==>  escaping state: %u\n", nextState);
+//                printf("   ==>  escaping state: %u\n", nextState);
                 insertIntoUIntSortedArrayList(escapedStates, nextState);
             }
         }
@@ -2516,7 +2529,7 @@ void getEscapeTransitionsHelper(DFA *M, int var, int *indices, PStatePairArrayLi
     if (pTransRel->degrees[currentState] > 0){
         for (nextStateIndex = 0; nextStateIndex < pTransRel->degrees[currentState]; nextStateIndex++){
             unsigned nextState = pTransRel->adjList[currentState][nextStateIndex];
-            printf("Next State = %u\n", nextState);
+//            printf("Next State = %u\n", nextState);
             //first time to see next node --> carry on DFS
             if (visited[nextState] == false)
                 getEscapeTransitionsHelper(M, var, indices, escapeTransitions, escapedStates, visited, pTransRel, pRevTransRel, nextState, escapeCharBin, escapeChar, numOfEscapees);
@@ -2541,15 +2554,15 @@ void getEscapeTransitions(DFA *M, int var, int *indices, char *escapeLambda, cha
 
     pTransitionRelation pTransRel = dfaGetTransitionRelation(M);
     dfaShiftTransitionRelation(pTransRel, sink);
-    dfaPrintTransitionRelationNoShift(pTransRel);
+//    dfaPrintTransitionRelationNoShift(pTransRel);
     pTransitionRelation pRevTransRel = dfaReverseTransitionRelation(pTransRel);
 //    dfaShiftTransitionRelation(pRevTransRel, sink);
-    dfaPrintTransitionRelationNoShift(pRevTransRel);
+//    dfaPrintTransitionRelationNoShift(pRevTransRel);
     getEscapeTransitionsHelper(M, var, indices, escapeTransitions, escapedStates, visited, pTransRel, pRevTransRel, M->s, escapeLambda, escapeChar, numOfEscapees);
-    
     free(visited);
     dfaFreeTransitionRelation(pTransRel);
     dfaFreeTransitionRelation(pRevTransRel);
+
 }
 
 /*
@@ -2753,9 +2766,9 @@ DFA *dfa_pre_escape(DFA *M, int var, int *indices, char escapeChar, char *escape
 	result = dfaBuild(statuces);
 
     free(exeps);
-//	//printf("FREE ToState\n");
+//	printf("FREE ToState\n");
 	free(to_states);
-//	//printf("FREE STATUCES\n");
+//	printf("FREE STATUCES\n");
 	free(statuces);
     free(escapeCharBin);
     free(symbol);

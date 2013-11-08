@@ -341,7 +341,10 @@ extern "C" {
     
     void print_semilinear_coefficients(struct semilinear_type* S);
     
-    
+    DFA* dfaMysqlEscapeString(DFA* inputAuto, int var, int* indices);
+
+    DFA* dfaPreMysqlEscapeString(DFA* inputAuto, int var, int* indices);
+
     DFA* dfaAddSlashes(DFA* inputAuto, int var, int* indices);
     
     DFA* dfaPreAddSlashes(DFA* inputAuto, int var, int* indices);
