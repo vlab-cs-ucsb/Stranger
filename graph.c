@@ -426,7 +426,8 @@ bool dfa_to_graph(DFA *M)
     pTransitionRelation p_transitionRelation = dfaGetTransitionRelation(M);
     //if we detect a self cycle then that is enough to abort looking for cycles
     selfCyclesFound = p_transitionRelation->selfCycles;
-        
+    if (selfCyclesFound)
+    	return true;
         
 //    dfaPrintTransitionRelation(p_transitionRelation);
     numOfNodes = p_transitionRelation->num_of_nodes;
@@ -582,8 +583,8 @@ bool isLengthFiniteTarjan(DFA *M, int var, int *indices)
     assert(sink >= 0);
     
     if (dfa_to_graph(M)){
-        printf("A self cycle has been found\n");
         sccFound = true;
+        return false;
     }
 
     
