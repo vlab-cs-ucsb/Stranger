@@ -425,7 +425,10 @@ bool dfa_to_graph(DFA *M)
     bool selfCyclesFound = false;
     pTransitionRelation p_transitionRelation = dfaGetTransitionRelation(M);
     //if we detect a self cycle then that is enough to abort looking for cycles
-    selfCyclesFound = p_transitionRelation->selfCycles;
+    if (p_transitionRelation->selfCycles) {
+    	dfaFreeTransitionRelation(p_transitionRelation);
+    	return true;
+    }
         
 //    dfaPrintTransitionRelation(p_transitionRelation);
     numOfNodes = p_transitionRelation->num_of_nodes;
@@ -567,15 +570,10 @@ bool DFSvisit2(int node, int sink)
 
 bool isLengthFiniteTarjan(DFA *M, int var, int *indices)
 {
-//    if (check_emptiness_minimized(M) || checkEmptyString(M)){
-//        return true;
-//    }
-    
-    if (check_emptiness_minimized(M)){
+    if (check_emptiness_minimized(M) || checkOnlyEmptyString(M, var, indices)) {
         return true;
     }
 
-    
     int node;
     int SCCcount=0;
     bool sccFound = false;
@@ -584,8 +582,9 @@ bool isLengthFiniteTarjan(DFA *M, int var, int *indices)
     int sink = find_sink(M);
     assert(sink >= 0);
     
+    // convert dfa->graph, if there is any self cycle, stop and return
     if (dfa_to_graph(M)){
-        sccFound = true;
+        return false;
     }
 
     
@@ -734,7 +733,7 @@ P_DFAFiniteLengths dfaGetLengthsFiniteLang(DFA *M, int var, int *indices){
     if (check_emptiness(M, var, indices)){
         return pDFAFiniteLengths;
     }
-    else if (checkOnlyEmptyString(M)){
+    else if (checkOnlyEmptyString(M, var, indices)){
         pDFAFiniteLengths->size = 1;
         pDFAFiniteLengths->lengths = (unsigned*) mem_alloc((size_t) pDFAFiniteLengths->size * sizeof(unsigned));
         pDFAFiniteLengths->lengths[0] = 0;

@@ -302,7 +302,7 @@ extern "C" {
     /*
      * check if dfa accepts only empty string
      */
-    int checkOnlyEmptyString(DFA *M);
+    int checkOnlyEmptyString(DFA *M, int var, int* indices);
     
     // generating an example i.e. an element of L(M)
     // Could return null in case solution is empty string or there

@@ -2860,7 +2860,7 @@ unsigned char strtobin(char* binChar, int var){
 char *isSingleton(DFA *M, int var, int* indices){
     if (check_emptiness(M, var, indices))
         return NULL;
-    if (checkOnlyEmptyString(M))
+    if (checkOnlyEmptyString(M, var, indices))
         return "";
 	paths state_paths, pp;
 	trace_descr tp;
@@ -2944,8 +2944,9 @@ int checkEmptyString(DFA *M){
 /*
  * check if dfa accepts only empty string
  */
-int checkOnlyEmptyString(DFA *M){
-    return (M->ns == 1 && M->f[M->s] == 1) ? 1 : 0;
+int checkOnlyEmptyString(DFA *M, int var, int* indices){
+	DFA *emptyString = dfaASCIIOnlyNullString(var, indices);
+	return check_equivalence(M, emptyString, var, indices);
 }
 
 
