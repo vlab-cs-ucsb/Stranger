@@ -2767,6 +2767,8 @@ bool check_emptiness_minimized(DFA *M){
 
 int check_emptiness(M1, var, indices)
 DFA *M1;int var;int *indices; {
+	if (M1->f[M1->s == 1])
+		return false;
     if (M1->ns == 1 && M1->f[M1->s] == -1)
         return true;
     
