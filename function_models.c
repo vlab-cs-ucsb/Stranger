@@ -3396,38 +3396,89 @@ DFA *dfa_pre_replace_char_with_string(DFA *M, int var, int *oldIndices, char rep
     
 }
 
-DFA *dfaHtmlSpecialChars(DFA *inputAuto, int var, int *indices){
-    DFA *a1 = dfa_replace_char_with_string(inputAuto, var, indices, '<', "&lt;");
+DFA *dfaHtmlSpecialChars(DFA *inputAuto, int var, int *indices, hscflags_t flags){
+    char *lt = "\xfe""lt;";
+    char *gt = "\xfe""gt;";
+    char *sq = "\xfe""apos;";
+    char *dq = "\xfe""quot;";
+    DFA *result = NULL;
 
-    DFA *a2 = dfa_replace_char_with_string(a1, var, indices, '>', "&gt;");
+    DFA *a1 = dfa_replace_char_with_string(inputAuto, var, indices, '<', lt);
+
+    DFA *a2 = dfa_replace_char_with_string(a1, var, indices, '>', gt);
     dfaFree(a1);
     
-    DFA *a3 = dfa_replace_char_with_string(a2, var, indices, '\'', "&apos;");
-    dfaFree(a2);
 
-    DFA *a4 = dfa_replace_char_with_string(a3, var, indices, '"', "&quot;");
-    dfaFree(a3);
+    if (flags == ENT_QUOTES){
+        DFA *a3 = dfa_replace_char_with_string(a2, var, indices, '\'', sq);
+        dfaFree(a2);
+
+        DFA *a4 = dfa_replace_char_with_string(a3, var, indices, '"', dq);
+        dfaFree(a3);
+
+        DFA *a5 = dfa_replace_char_with_string(a4, var, indices, '&', "&amp;");
+        dfaFree(a4);
+
+        result = dfa_replace_char_with_string(a5, var, indices, '\xfe', "&");
+        dfaFree(a5);
+    }
     
-    DFA *a5 = dfa_replace_char_with_string(a4, var, indices, '&', "&amp;");
-    dfaFree(a4);
+    else if (flags == ENT_COMPAT){
+            DFA *a3 = dfa_replace_char_with_string(a2, var, indices, '"', dq);
+            dfaFree(a2);
 
-    return a5;
+            DFA *a4 = dfa_replace_char_with_string(a3, var, indices, '&', "&amp;");
+            dfaFree(a3);
+
+            result = dfa_replace_char_with_string(a4, var, indices, '\xfe', "&");
+            dfaFree(a4);
+
+    }
+    else {
+        DFA *a3 = dfa_replace_char_with_string(a2, var, indices, '&', "&amp;");
+        dfaFree(a2);
+
+        result = dfa_replace_char_with_string(a3, var, indices, '\xfe', "&");
+        dfaFree(a3);
+    }
+
+    return result;
 }
 
-DFA *dfaPreHtmlSpecialChars(DFA *inputAuto, int var, int *indices){
+DFA *dfaPreHtmlSpecialChars(DFA *inputAuto, int var, int *indices, hscflags_t flags){
+    DFA *result = NULL;
+
     DFA *a1 = dfa_pre_replace_char_with_string(inputAuto, var, indices, '&', "&amp;");
     
-    DFA *a2 = dfa_pre_replace_char_with_string(a1, var, indices, '"', "&quot;");
-    dfaFree(a1);
+    if (flags == ENT_QUOTES){
+        DFA *a2 = dfa_pre_replace_char_with_string(a1, var, indices, '"', "&quot;");
+        dfaFree(a1);
 
-    DFA *a3 = dfa_pre_replace_char_with_string(a2, var, indices, '\'', "&apos;");
-    dfaFree(a2);
+        DFA *a3 = dfa_pre_replace_char_with_string(a2, var, indices, '\'', "&apos;");
+        dfaFree(a2);
 
-    DFA *a4 = dfa_pre_replace_char_with_string(a3, var, indices, '>', "&gt;");
-    dfaFree(a3);
-    
-    DFA *a5 = dfa_pre_replace_char_with_string(a4, var, indices, '<', "&lt;");
-    dfaFree(a4);
-    
-    return a5;
+        DFA *a4 = dfa_pre_replace_char_with_string(a3, var, indices, '>', "&gt;");
+        dfaFree(a3);
+
+        result = dfa_pre_replace_char_with_string(a4, var, indices, '<', "&lt;");
+        dfaFree(a4);
+    }
+    else if (flags == ENT_COMPAT){
+        DFA *a2 = dfa_pre_replace_char_with_string(a1, var, indices, '"', "&quot;");
+        dfaFree(a1);
+
+        DFA *a3 = dfa_pre_replace_char_with_string(a2, var, indices, '>', "&gt;");
+        dfaFree(a2);
+
+        result = dfa_pre_replace_char_with_string(a3, var, indices, '<', "&lt;");
+        dfaFree(a3);
+    }
+    else {
+        DFA *a2 = dfa_pre_replace_char_with_string(a1, var, indices, '>', "&gt;");
+        dfaFree(a1);
+
+        result = dfa_pre_replace_char_with_string(a2, var, indices, '<', "&lt;");
+        dfaFree(a2);
+    }
+    return result;
 }

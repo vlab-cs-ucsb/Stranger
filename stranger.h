@@ -132,6 +132,13 @@ extern "C" {
     void dfaPrintTransitionRelation(pTransitionRelation p_transitionRelation);
     void dfaPrintTransitionRelationNoShift(pTransitionRelation p_transitionRelation);
 
+
+    /*=====================================================================*/
+    /* Function Helpers
+     */
+    typedef enum {ENT_COMPAT, ENT_QUOTES, ENT_NOQUOTES} hscflags_t;
+
+
     //*====================================================================
     /* Construct functions
      */
@@ -385,8 +392,8 @@ extern "C" {
     DFA *dfa_pre_escape(DFA *M, int var, int *indices, char escapeChar, char *escapedChars, unsigned numOfEscapedChars);
     DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string);
     DFA *dfa_pre_replace_char_with_string(DFA *M, int var, int *oldIndices, char replacedChar, char *string);
-    DFA *dfaHtmlSpecialChars(DFA *inputAuto, int var, int *indices);
-    DFA *dfaPreHtmlSpecialChars(DFA *inputAuto, int var, int *indices);
+    DFA *dfaHtmlSpecialChars(DFA *inputAuto, int var, int *indices, hscflags_t flags);
+    DFA *dfaPreHtmlSpecialChars(DFA *inputAuto, int var, int *indices, hscflags_t flags);
     
     //Utility function
     int getVar();
