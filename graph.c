@@ -672,7 +672,7 @@ void addLengthToNodeLengths(P_NodeLengths nodeLengths, unsigned len){
             //need resize
             if (nodeLengths->index == nodeLengths->size){
                 nodeLengths->size *= 2;
-                printf("new size = %u\n", nodeLengths->size);
+//                printf("new size = %u\n", nodeLengths->size);
                 nodeLengths->lengths = (unsigned*) mem_resize(nodeLengths->lengths, (size_t) nodeLengths->size * sizeof(unsigned));
                 mem_zero(nodeLengths->lengths + nodeLengths->index, (size_t) (nodeLengths->size - nodeLengths->index) * sizeof(unsigned));
             }
