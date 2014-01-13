@@ -17,7 +17,8 @@ extern "C" {
     
     //PRINT DFA
 #define _FANG_DFA_DEBUG 0
-    
+
+#define DEBUG_SIZE_INFO 1
     /*===================================================================*/
     /* 8 bits for ASCII and 1 bit reserved for replacement
      */
