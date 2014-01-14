@@ -71,7 +71,7 @@ Backward Analysis
   dfaFree(Mtrans);
   dfaFree(Ma);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : pre_concat : %d : %u \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : pre_concat : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
   return dfaMinimize(result);
  }
 
@@ -110,7 +110,7 @@ DFA* dfa_pre_concat_const(DFA* ML, char* str, int pos, int var, int* indices){
   dfaFree(Ma);
   dfaFree(Mtrans);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : pre_const_concat : %d : %u \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : pre_const_concat : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
   return dfaMinimize(result);
  }
 

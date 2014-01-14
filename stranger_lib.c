@@ -916,7 +916,7 @@ DFA *M1;DFA *M2; {
 DFA *dfa_union_with_emptycheck(DFA* M1, DFA* M2, int var, int* indices){
 	DFA* tmpM = dfaProduct(M1, M2, dfaOR);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : union : %d : %u \n", tmpM->ns, bdd_size(tmpM->bddm) );
+		printf("\t peak : union : states %d : bddnodes %u \n", tmpM->ns, bdd_size(tmpM->bddm) );
 	DFA *result = dfaMinimize(tmpM);
 	dfaFree(tmpM);tmpM = NULL;
 	if(checkEmptyString(M1)||checkEmptyString(M2)){
@@ -932,7 +932,7 @@ DFA *dfa_intersect(M1, M2)
 	DFA *result, *tmpM;
 	tmpM = dfaProduct(M1, M2, dfaAND);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : intersect : %d : %u \n", tmpM->ns, bdd_size(tmpM->bddm) );
+		printf("\t peak : intersect : states %d : bddnodes %u \n", tmpM->ns, bdd_size(tmpM->bddm) );
 	result = dfaMinimize(tmpM);
 	dfaFree(tmpM);
 	return result;
@@ -948,7 +948,7 @@ DFA *dfa_negate(M1, var, indices)
 	dfaFree(tmpM1);
 	dfaFree(tmpM2);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : negate : %d : %u \n", tmpM3->ns, bdd_size(tmpM3->bddm) );
+		printf("\t peak : negate : states %d : bddnodes %u \n", tmpM3->ns, bdd_size(tmpM3->bddm) );
 	result = dfaMinimize(tmpM3);
 	dfaFree(tmpM3);
 	return result;
@@ -1301,7 +1301,7 @@ DFA *dfa_concat_extrabit(M1, M2, var, indices)
 
 	  //printf("START TO PROJECT\n");
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : concat : %d : %u : before projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
+		printf("\t peak : concat : states %d : bddnodes %u : before projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
 	  result=dfaProject(tmpM, (unsigned) var);
 	  //dfaPrintVerbose(result);
 
@@ -1317,7 +1317,7 @@ DFA *dfa_concat_extrabit(M1, M2, var, indices)
 	  free(statuces);
 	  dfaFree(tmpM);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : concat : %d : %u : after projection \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : concat : states %d : bddnodes %u : after projection \n", result->ns, bdd_size(result->bddm) );
       tmpM = dfaMinimize(result);
         dfaFree(result);
         return tmpM;

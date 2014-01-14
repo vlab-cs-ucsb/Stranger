@@ -144,11 +144,11 @@ DFA *dfa_replace_delete(DFA *M, int var, int *oldindices)
   for(i=0; i<aux; i++){
     j=len -i;
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace_delete : %d : %u : before projection : loop %d \n", tmpM2->ns, bdd_size(tmpM2->bddm), i );
+		printf("\t peak : replace_delete : states %d : bddnodes %u : before projection : loop %d \n", tmpM2->ns, bdd_size(tmpM2->bddm), i );
     tmpM1 =dfaProject(tmpM2, (unsigned) j);
       dfaFree(tmpM2); tmpM2 = NULL;
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace_delete : %d : %u : after projection : loop %d \n", tmpM1->ns, bdd_size(tmpM1->bddm), i );
+		printf("\t peak : replace_delete : states %d : bddnodes %u : after projection : loop %d \n", tmpM1->ns, bdd_size(tmpM1->bddm), i );
     tmpM2 = dfaMinimize(tmpM1);
       dfaFree(tmpM1); tmpM1 = NULL;
   }
@@ -164,7 +164,7 @@ DFA *dfa_replace_delete(DFA *M, int var, int *oldindices)
     free_ilt(pairs[i]);
   free(pairs);
   if( DEBUG_SIZE_INFO )
-	  printf("\t peak : replace_delete : %d : %u \n", tmpM2->ns, bdd_size(tmpM2->bddm) );
+	  printf("\t peak : replace_delete : states %d : bddnodes %u \n", tmpM2->ns, bdd_size(tmpM2->bddm) );
   result = dfaMinimize(tmpM2);	//MUST BE CAREFUL FOR INDICES..INDICES MAY NOT MATCH!!
     dfaFree(tmpM2);
     return result;
@@ -295,11 +295,11 @@ DFA *dfa_replace_char(DFA *M, char a, int var, int *oldindices)
   for(i=0; i<aux; i++){
     j=len-i; //len = var
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace_char : %d : %u : before projection : loop %d \n", tmpM1->ns, bdd_size(tmpM1->bddm), i );
+		printf("\t peak : replace_char : states %d : bddnodes %u : before projection : loop %d \n", tmpM1->ns, bdd_size(tmpM1->bddm), i );
     tmpM2 =dfaProject(tmpM1, (unsigned) j);
       dfaFree(tmpM1); tmpM1 = NULL;
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace char : %d : %u : after projection : loop %d \n", tmpM2->ns, bdd_size(tmpM2->bddm), i );
+		printf("\t peak : replace char : states %d : bddnodes %u : after projection : loop %d \n", tmpM2->ns, bdd_size(tmpM2->bddm), i );
     tmpM1 = dfaMinimize(tmpM2);
       dfaFree(tmpM2); tmpM2 = NULL;
   }
@@ -317,7 +317,7 @@ DFA *dfa_replace_char(DFA *M, char a, int var, int *oldindices)
     free_ilt(pairs[i]);
   free(pairs);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace_char : %d : %u \n", tmpM1->ns, bdd_size(tmpM1->bddm) );
+		printf("\t peak : replace_char : states %d : bddnodes %u \n", tmpM1->ns, bdd_size(tmpM1->bddm) );
     result = dfaMinimize(tmpM1);
     dfaFree(tmpM1);
     return result;
@@ -1028,7 +1028,7 @@ DFA *dfa_replace_string(DFA *M, char *str, int var, int *oldindices)
 //    printf("Replace automaton built. Now minimizing and projecting\n");
 
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace_string : %d : %u : before loop \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : replace_string : states %d : bddnodes %u : before loop \n", result->ns, bdd_size(result->bddm) );
   tmpM1 = dfaMinimize(result);
   dfaFree(result); result = NULL;
     
@@ -1040,7 +1040,7 @@ DFA *dfa_replace_string(DFA *M, char *str, int var, int *oldindices)
 //      dfaPrintVitals(result);
 //    }
       if( DEBUG_SIZE_INFO )
-    	  printf("\t peak : replace_string : %d : %u : before projection : loop %d \n", tmpM1->ns, bdd_size(tmpM1->bddm), i );
+    	  printf("\t peak : replace_string : states %d : bddnodes %u : before projection : loop %d \n", tmpM1->ns, bdd_size(tmpM1->bddm), i );
     tmpM2 =dfaProject(tmpM1, (unsigned) j);
       dfaFree(tmpM1); tmpM1 = NULL;
 //    if(_FANG_DFA_DEBUG){
@@ -1048,7 +1048,7 @@ DFA *dfa_replace_string(DFA *M, char *str, int var, int *oldindices)
 //      dfaPrintVitals(tmpM2);
 //    }
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : replace_string : %d : %u : after projection : loop %d \n", tmpM2->ns, bdd_size(tmpM2->bddm), i );
+			printf("\t peak : replace_string : states %d : bddnodes %u : after projection : loop %d \n", tmpM2->ns, bdd_size(tmpM2->bddm), i );
     tmpM1 = dfaMinimize(tmpM2);
       dfaFree(tmpM2); tmpM2 = NULL;
 //    if(_FANG_DFA_DEBUG){
@@ -1187,7 +1187,7 @@ DFA *dfa_replace_extrabit(M1, M2, str, var, indices)
   dfaFree(M_sharp);
 
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : replace_extrabit : %d : %u \n", temp1->ns, bdd_size(temp1->bddm) );
+		printf("\t peak : replace_extrabit : states %d : bddnodes %u \n", temp1->ns, bdd_size(temp1->bddm) );
   result = dfaMinimize(temp1);
   dfaFree(temp1);
   return result;

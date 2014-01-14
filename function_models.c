@@ -654,12 +654,12 @@ DFA *dfaRightTrim(DFA *M, char c, int var, int *oldindices) {
 //	printf("dfaAfterRightTrimBeforeMinimize\n");
 //	dfaPrintGraphviz(result, len, indices);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : right_trim : %d : %u : before projection \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : right_trim : states %d : bddnodes %u : before projection \n", result->ns, bdd_size(result->bddm) );
 	j = len - 1;
 	tmpM = dfaProject(result, (unsigned) j);
 	dfaFree(result);result = NULL;
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : right_trim : %d : %u : after projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
+		printf("\t peak : right_trim : states %d : bddnodes %u : after projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
 	result = dfaMinimize(tmpM);
 	dfaFree(tmpM);tmpM = NULL;
 
@@ -1034,11 +1034,11 @@ DFA *dfaPreRightTrim(DFA *M, char c, int var, int *oldIndices)
 	//	dfaPrintVerbose(result);
     free(indices);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : pre_right_trim : %d : %u : before projection \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : pre_right_trim : states %d : bddnodes %u : before projection \n", result->ns, bdd_size(result->bddm) );
     tmpM = dfaProject(result, (unsigned) var);
     dfaFree(result); result = NULL;
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : pre_right_trim : %d : %u : after projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
+		printf("\t peak : pre_right_trim : states %d : bddnodes %u : after projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
     result = dfaMinimize(tmpM);
     dfaFree(tmpM); tmpM = NULL;
     //		printf("\n After projecting away %d bits", j);
@@ -1433,11 +1433,11 @@ DFA *dfaLeftTrim(DFA *M, char c, int var, int *oldindices)
 	for (i = 0; i < aux; i++) {
 		j = len - i - 1;
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : left_trim : %d : %u : before projection : loop %d \n", result->ns, bdd_size(result->bddm), i );
+			printf("\t peak : left_trim : states %d : bddnodes %u : before projection : loop %d \n", result->ns, bdd_size(result->bddm), i );
 		tmpM = dfaProject(result, (unsigned) j);
 		dfaFree(result); result = NULL;
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : left_trim : %d : %u : after projection : loop %d \n", tmpM->ns, bdd_size(tmpM->bddm), i );
+			printf("\t peak : left_trim : states %d : bddnodes %u : after projection : loop %d \n", tmpM->ns, bdd_size(tmpM->bddm), i );
 		result = dfaMinimize(tmpM);
 		dfaFree(tmpM); tmpM = NULL;
 		//		printf("\n After projecting away %d bits", j);
@@ -1672,7 +1672,7 @@ DFA *dfaPreLeftTrim(DFA *M, char c, int var, int *oldIndices)
     //	dfaPrintGraphviz(result, len, indices);
 	//	dfaPrintVerbose(result);
     if( DEBUG_SIZE_INFO )
-    	printf("\t peak : pre_left_trim : %d : %u \n", result->ns, bdd_size(result->bddm) );
+    	printf("\t peak : pre_left_trim : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
     DFA *tmp = dfaMinimize(result);
     dfaFree(result);
     return tmp;
@@ -2128,11 +2128,11 @@ DFA* dfaPrePostToLowerUpperCaseHelper(DFA* M, int var, int* oldIndices, boolean 
 //		dfaPrintVerbose(tmpM);
 		flush_output();
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : upper_lower_case : %d : %u : before projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
+			printf("\t peak : upper_lower_case : states %d : bddnodes %u : before projection \n", tmpM->ns, bdd_size(tmpM->bddm) );
 		result = dfaProject(tmpM, ((unsigned)var));
 		dfaFree(tmpM); tmpM = NULL;
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : upper_lower_case : %d : %u : after projection \n", result->ns, bdd_size(result->bddm) );
+			printf("\t peak : upper_lower_case : states %d : bddnodes %u : after projection \n", result->ns, bdd_size(result->bddm) );
 		tmpM = dfaMinimize(result);
 		dfaFree(result);result = NULL;
 
@@ -2391,7 +2391,7 @@ DFA *dfa_escape(DFA *M, int var, int *oldindices, char escapeChar, char *escaped
     free(statePairs->list);
     free(statePairs);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : escape : %d : %u \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : escape : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
     DFA *tmp = dfaMinimize(result);
     dfaFree(result);
 	return tmp;
@@ -2798,7 +2798,7 @@ DFA *dfa_pre_escape(DFA *M, int var, int *indices, char escapeChar, char *escape
     freeStatePairArrayList(escapeTransitions);
     //    dfaPrintVerbose(result);
 	if( DEBUG_SIZE_INFO )
-		printf("\t peak : pre_escape : %d : %u \n", result->ns, bdd_size(result->bddm) );
+		printf("\t peak : pre_escape : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
     DFA *tmp = dfaMinimize(result);
 //    dfaPrintVerbose(tmp);
     dfaFree(result);
@@ -3120,16 +3120,16 @@ DFA *dfa_replace_char_with_string(DFA *M, int var, int *oldIndices, char replace
     DFA *tmp;
     if(extraBitNeeded){
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : replace_char_with_string : %d : %u : before projection \n", result->ns, bdd_size(result->bddm) );
+			printf("\t peak : replace_char_with_string : states %d : bddnodes %u : before projection \n", result->ns, bdd_size(result->bddm) );
         tmp = dfaProject(result, var);
         dfaFree(result);
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : replace_char_with_string : %d : %u : after projection \n", tmp->ns, bdd_size(tmp->bddm) );
+			printf("\t peak : replace_char_with_string : states %d : bddnodes %u : after projection \n", tmp->ns, bdd_size(tmp->bddm) );
         result = dfaMinimize(tmp);
         dfaFree(tmp);
     } else {
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : replace_char_with_string : %d : %u \n", result->ns, bdd_size(result->bddm) );
+			printf("\t peak : replace_char_with_string : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
         tmp = dfaMinimize(result);
         dfaFree(result);
         result = tmp;
@@ -3406,16 +3406,16 @@ DFA *dfa_pre_replace_char_with_string(DFA *M, int var, int *oldIndices, char rep
     DFA *tmp;
     if(extraBitNeeded){
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : pre_replace_char_with_string : %d : %u : before projection \n", result->ns, bdd_size(result->bddm) );
+			printf("\t peak : pre_replace_char_with_string : states %d : bddnodes %u : before projection \n", result->ns, bdd_size(result->bddm) );
         tmp = dfaProject(result, var);
         dfaFree(result);
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : pre_replace_char_with_string : %d : %u : after projection \n", tmp->ns, bdd_size(tmp->bddm) );
+			printf("\t peak : pre_replace_char_with_string : states %d : bddnodes %u : after projection \n", tmp->ns, bdd_size(tmp->bddm) );
         result = dfaMinimize(tmp);
         dfaFree(tmp);
     } else {
 		if( DEBUG_SIZE_INFO )
-			printf("\t peak : pre_replace_char_with_string : %d : %u \n", result->ns, bdd_size(result->bddm) );
+			printf("\t peak : pre_replace_char_with_string : states %d : bddnodes %u \n", result->ns, bdd_size(result->bddm) );
         tmp = dfaMinimize(result);
         dfaFree(result);
         result = tmp;
