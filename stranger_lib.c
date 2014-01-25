@@ -880,7 +880,6 @@ DFA *dfaSigmaLengthsSet(unsigned *lengths, const unsigned size, bool sorted, int
     DFA *tmp = dfaMinimize(result);
     dfaFree(result);
     return tmp;
-
 }
 
 // for INTERNAL use.

@@ -228,6 +228,15 @@ extern "C" {
     // replace ALL strings that match L(M2) in L(M1) with string str
     DFA *dfa_replace_extrabit(DFA *M1, DFA *M2, char *str, int var, int *indices);
     
+    /**
+     * General replace
+     * M1: subject automaton that replace will occur on
+     * M2: search automaton representing the pattern that we will match against
+     * M3: the replace language
+     * replace ALL strings that match L(M2) in L(M1) with L(M3)
+     */
+    DFA *dfa_general_replace_extrabit(DFA* M1, DFA* M2, DFA* M3, int var, int* indices);
+
     DFA *dfa_closure_extrabit(DFA *M1,int var,int *indices); // added by Muath to be used by java StrangerLibrary
     
     DFA *dfaWiden(DFA *a, DFA *d); // added by Muath to be used by java StrangerLibrary

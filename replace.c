@@ -774,7 +774,6 @@ DFA *dfa_replace_M_arbitrary(DFA *M, DFA *Mr, int var, int *oldindices)
   statuces[ns]='\0';
   result=dfaBuild(statuces);
 
-
   for(i=0; i<aux; i++){
     j=len-i;
     if(_FANG_DFA_DEBUG){
@@ -782,7 +781,9 @@ DFA *dfa_replace_M_arbitrary(DFA *M, DFA *Mr, int var, int *oldindices)
       printf("Original:%d", i);
       dfaPrintVitals(result);
     }
+
     tmpM =dfaProject(dfaMinimize(result), (unsigned) j);
+
     if(_FANG_DFA_DEBUG){
       printf("Projected:%d", i);
       dfaPrintVitals(tmpM);
@@ -1113,6 +1114,7 @@ DFA *dfa_replace_step3_general_replace(DFA *M, DFA* Mr, int var, int *indices)
   if(!check_emptiness(tmp, var, indices)){
     //replace rest rather than single character
     result2 = dfa_replace_M_arbitrary(M, tmp, var, indices);
+
    if(result){
      result1 = result;
      result = dfa_union(result1, result2);
@@ -1203,14 +1205,16 @@ DFA *dfa_general_replace_extrabit(DFA* M1, DFA* M2, DFA* M3, int var, int* indic
   DFA *M_rep;
   DFA *M_sharp = dfaSharpStringWithExtraBit(var, indices);
 
-  //printf("Insert sharp1 and sharp2 for duplicate M1\n");
+//  printf("Insert sharp1 and sharp2 for duplicate M1\n");
   M1_bar = dfa_replace_step1_duplicate(M1, var, indices);
   //	dfaPrintVerbose(M1_bar);  //having extra bit
   if(_FANG_DFA_DEBUG) printf("\nGeneral Replace of M1_bar: var %d\n", var);
   //dfaPrintVerbose(M1_bar);
   //	dfaPrintGraphviz(M1_bar, var+1, allocateAscIIIndex(var+1));
   //printf("Generate M2 bar sharp1 M2 and sharp2\n");
+
   M2_bar = dfa_replace_step2_match_compliment(M2, var, indices);
+
   //	dfaPrintVerbose(M2_bar);  //having extra bit
   if(_FANG_DFA_DEBUG) printf("\nGeneral Replace of M2_bar: var %d\n", var);
   //dfaPrintVerbose(M2_bar);
@@ -1229,7 +1233,9 @@ DFA *dfa_general_replace_extrabit(DFA* M1, DFA* M2, DFA* M3, int var, int* indic
 
     //printf("Start Replacement!\n");
     //replace match patterns
+
     M_rep = dfa_replace_step3_general_replace(M_inter, M3, var, indices);
+
     if(_FANG_DFA_DEBUG) dfaPrintVerbose(M_rep);
     result = dfaProject(M_rep, (unsigned) var);
     dfaFree(M_rep);
