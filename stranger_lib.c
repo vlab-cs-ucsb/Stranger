@@ -5167,7 +5167,8 @@ char *dfaGenerateExample(DFA* M, int var, unsigned indices[]){
 	int i1, j1;
 	// array of strings of 0's and 1's where each string represent an ASCII
 	// value for a character on the automaton accepting path
-	char **decoded_result = malloc(sizeof(char *) * jump);
+//	char **decoded_result = malloc(sizeof(char *) * jump);
+	char **decoded_result = calloc(jump, sizeof(char *));
 	for (i1 = 0; i1 < jump; i1++) {
 		char *temp_r = malloc(sizeof(char) * (8 + 1));// 1 for null
 		int k = 0;
@@ -5180,7 +5181,8 @@ char *dfaGenerateExample(DFA* M, int var, unsigned indices[]){
 		*(decoded_result + i1) = temp_r;
 		//		printf("\n");
 	}
-	char * final_result = malloc(sizeof(char) * (jump + 1));
+//	char * final_result = malloc(sizeof(char) * (jump + 1));
+	char * final_result = calloc(jump + 1, sizeof(char));
 	for (i1 = 0; i1 < jump; i1++){
 		final_result[i1] = arr_to_ascii(decoded_result[i1]);
 	}
