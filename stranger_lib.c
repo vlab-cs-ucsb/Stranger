@@ -5162,7 +5162,7 @@ char *dfaGenerateExample(DFA* M, int var, unsigned indices[]){
 	char *result = dfaMakeExample(M, 1, var, indices);
 	if (result == NULL)
 		return NULL;
-	printf("%s  %d\n", result, mystrlen(result));
+//	printf("%s  %d\n", result, mystrlen(result));
 	int jump = mystrlen(result) / 8;
 	int i1, j1;
 	// array of strings of 0's and 1's where each string represent an ASCII
