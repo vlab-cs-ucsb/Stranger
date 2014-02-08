@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="cdt.managedbuild.config.gnu.so.debug.1515185515">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.so.debug.1515185515" moduleId="org.eclipse.cdt.core.settings" name="Debug">
@@ -36,9 +34,7 @@
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.so.debug.option.optimization.level.473219343" name="Optimization Level" superClass="gnu.c.compiler.so.debug.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.so.debug.option.debugging.level.1316108554" name="Debug Level" superClass="gnu.c.compiler.so.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1980260252" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MONA/BDD}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MONA/DFA}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/MONA/Mem}&quot;"/>
+									<listOptionValue builtIn="false" value="/usr/local/include/mona"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.363922495" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fPIC -std=c99" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.931330251" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
@@ -52,11 +48,9 @@
 									<listOptionValue builtIn="false" value="monabdd"/>
 								</option>
 								<option id="gnu.c.link.option.paths.20209365" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="/home/abaki/workspace/MONA/BDD/.libs"/>
-									<listOptionValue builtIn="false" value="/home/abaki/workspace/MONA/DFA/.libs"/>
-									<listOptionValue builtIn="false" value="/home/abaki/workspace/MONA/Mem/.libs"/>
+									<listOptionValue builtIn="false" value="/usr/local/lib"/>
 								</option>
-								<option id="gnu.c.link.option.ldflags.1573986772" superClass="gnu.c.link.option.ldflags" value="-std=c99" valueType="string"/>
+								<option id="gnu.c.link.option.ldflags.1573986772" name="Linker flags" superClass="gnu.c.link.option.ldflags" value="-std=c99" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1851443156" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
