@@ -2876,8 +2876,10 @@ char *isSingleton(DFA *M, int var, int* indices){
 	paths state_paths, pp;
 	trace_descr tp;
 	int j, i, current, next, singleTransOut;
-    char *result = (char*) malloc(M->ns * sizeof(char));
-    char *symbol = (char*) malloc((var + 1) * sizeof(char));
+//    char *result = (char*) malloc(M->ns * sizeof(char));
+	char *result = (char*) calloc(M->ns, sizeof(char));
+//	char *symbol = (char*) malloc((var + 1) * sizeof(char));
+	char *symbol = (char*) calloc((var + 1), sizeof(char));
 	int sink = find_sink(M);
 	struct int_list_type *visited=NULL;
 	for (i = 0, current = 0, singleTransOut = TRUE; singleTransOut == TRUE && current != -1; current = next, i++){
