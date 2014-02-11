@@ -174,5 +174,6 @@ stranger.xcodeproj/project.xcworkspace/
 *.lai
 *.la
 *.a
+*.orig
 
 Debug
